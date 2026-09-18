@@ -4,6 +4,7 @@ import '../core/design/app_theme.dart';
 import '../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../features/products/presentation/pages/products_page.dart';
 import '../features/materials/presentation/pages/materials_page.dart';
+import '../features/inventory/presentation/pages/inventory_page.dart';
 
 class ZohalApp extends StatelessWidget {
   const ZohalApp({super.key});
@@ -33,6 +34,7 @@ class _ZohalHomePageState extends State<ZohalHomePage> {
   final List<Widget> _pages = const [
     DashboardPage(),
     Center(child: Text('فروش')),
+    InventoryPage(),
     ProductsPage(),
     Center(child: Text('مشتریان')),
     MaterialsPage(),
@@ -65,6 +67,11 @@ class _ZohalHomePageState extends State<ZohalHomePage> {
             NavigationDestination(
               icon: Icon(Icons.inventory_2_outlined),
               selectedIcon: Icon(Icons.inventory_2),
+              label: 'انبار',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.category_outlined),
+              selectedIcon: Icon(Icons.category),
               label: 'محصولات',
             ),
             NavigationDestination(
@@ -73,8 +80,8 @@ class _ZohalHomePageState extends State<ZohalHomePage> {
               label: 'مشتریان',
             ),
             NavigationDestination(
-              icon: Icon(Icons.category_outlined),
-              selectedIcon: Icon(Icons.category),
+              icon: Icon(Icons.layers_outlined),
+              selectedIcon: Icon(Icons.layers),
               label: 'مواد و اقلام',
             ),
           ],
