@@ -105,7 +105,7 @@ class InventoryMovement {
   final InventoryMovementType movementType;
   final DateTime timestamp;
   final String? referenceId;
-  final int? unitCost;
+  final double? unitCost;
   final String? note;
 
   double get signedQuantity {
@@ -141,7 +141,7 @@ class InventoryMovement {
       ),
       timestamp: DateTime.parse(map['timestamp'] as String),
       referenceId: map['referenceId'] as String?,
-      unitCost: (map['unitCost'] as num?)?.toInt(),
+      unitCost: (map['unitCost'] as num?)?.toDouble(),
       note: map['note'] as String?,
     );
   }

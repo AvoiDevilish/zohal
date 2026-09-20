@@ -16,9 +16,16 @@ class InventoryStore {
   }
 
   Future<void> addMovement(InventoryMovement movement) async {
-    final movements = await getMovements();
+    await addMovements([movement]);
+  }
 
-    movements.add(movement);
+  Future<void> addMovements(List<InventoryMovement> newMovements) async {
+    if (newMovements.isEmpty) {
+      return;
+    }
+
+    final movements = await getMovements();
+    movements.addAll(newMovements);
 
     await LocalStore.instance.writeList(
       _storageKey,
