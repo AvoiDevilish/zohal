@@ -5,6 +5,7 @@ import '../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../features/products/presentation/pages/products_page.dart';
 import '../features/materials/presentation/pages/materials_page.dart';
 import '../features/inventory/presentation/pages/inventory_page.dart';
+import '../features/workshop/presentation/screens/workshop_dashboard_screen.dart';
 
 class ZohalApp extends StatelessWidget {
   const ZohalApp({super.key});
@@ -38,6 +39,7 @@ class _ZohalHomePageState extends State<ZohalHomePage> {
     ProductsPage(),
     Center(child: Text('مشتریان')),
     MaterialsPage(),
+    WorkshopDashboardScreen(),
   ];
 
   @override
@@ -83,6 +85,11 @@ class _ZohalHomePageState extends State<ZohalHomePage> {
               icon: Icon(Icons.layers_outlined),
               selectedIcon: Icon(Icons.layers),
               label: 'مواد و اقلام',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.precision_manufacturing_outlined),
+              selectedIcon: Icon(Icons.precision_manufacturing),
+              label: 'کارگاه',
             ),
           ],
         ),
