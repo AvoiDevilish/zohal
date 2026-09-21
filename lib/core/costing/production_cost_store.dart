@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'production_cost.dart';
@@ -17,7 +19,7 @@ class ProductionCostStore {
     return data
         .map(
           (item) => ProductionCost.fromMap(
-            Map<String, dynamic>.from(Uri.splitQueryString(item)),
+            Map<String, dynamic>.from(jsonDecode(item) as Map),
           ),
         )
         .toList();
@@ -52,20 +54,13 @@ class ProductionCostStore {
 
     await prefs.setStringList(
       _key,
-      costs
-          .map(
-            (item) => item
-                .toMap()
-                .entries
-                .map((e) => '${e.key}=${e.value}')
-                .join('&'),
-          )
-          .toList(),
+      costs.map((item) => jsonEncode(item.toMap())).toList(),
     );
   }
 
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.remove(_key);
   }
 }
