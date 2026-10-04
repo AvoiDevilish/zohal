@@ -1,4 +1,4 @@
-enum FinancialAccountType { customer, cash, salesRevenue }
+enum FinancialAccountType { customer, supplier, cash, salesRevenue, inventoryAsset }
 
 class FinancialAccount {
   const FinancialAccount({
