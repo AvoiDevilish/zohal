@@ -96,10 +96,16 @@ class ProductionOrderExecutionService {
       );
     }
 
+    final updatedOrder = _withStatus(
+      order,
+      SalesOrderStatus.materialsReserved,
+    );
+    await orderStore.update(updatedOrder);
+
     return ProductionOrderExecutionResult(
       orderId: order.id,
       changed: true,
-      order: order,
+      order: updatedOrder,
       reservationCount: requirements.length,
     );
   }
@@ -122,7 +128,7 @@ class ProductionOrderExecutionService {
       );
     }
 
-    if (order.status != SalesOrderStatus.readyForProduction &&
+    if (order.status != SalesOrderStatus.materialsReserved &&
         order.status != SalesOrderStatus.inProduction) {
       throw StateError('این سفارش در وضعیت قابل تولید نیست.');
     }
