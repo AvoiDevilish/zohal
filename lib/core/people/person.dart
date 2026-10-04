@@ -19,6 +19,8 @@ class Person {
 
   bool get isCustomer => roles.contains(PersonRole.customer);
   bool get isSupplier => roles.contains(PersonRole.supplier);
+  String get customerAccountId => 'customer-' + id;
+  String get supplierAccountId => 'supplier-' + id;
 
   Person copyWith({
     String? name,
