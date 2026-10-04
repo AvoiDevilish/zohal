@@ -111,9 +111,7 @@ void main() {
     final analysisResult = await analysis();
 
     await service().reserve(currentOrder, analysisResult);
-    await orderStore.update(currentOrder.copyWith(status: SalesOrderStatus.inProduction));
     final result = await service().startProduction(
-      currentOrder.copyWith(status: SalesOrderStatus.inProduction),
       analysisResult,
     );
 
@@ -136,10 +134,8 @@ void main() {
     final analysisResult = await analysis();
 
     await service().reserve(currentOrder, analysisResult);
-    await orderStore.update(currentOrder.copyWith(status: SalesOrderStatus.inProduction));
 
     final first = await service().startProduction(
-      currentOrder.copyWith(status: SalesOrderStatus.inProduction),
       analysisResult,
     );
 
