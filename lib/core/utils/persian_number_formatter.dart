@@ -4,10 +4,12 @@ class PersianNumberFormatter {
   static const List<String> _hundreds = ['', 'صد', 'دویست', 'سیصد', 'چهارصد', 'پانصد', 'ششصد', 'هفتصد', 'هشتصد', 'نهصد'];
   static const List<String> _scales = ['', 'هزار', 'میلیون', 'میلیارد', 'تریلیون'];
 
-  static String digits(int value) {
+  static String digits(int value) => digitsText(value.toString());
+
+  static String digitsText(String value) {
     const western = '0123456789';
     const persian = '۰۱۲۳۴۵۶۷۸۹';
-    return value.toString().split('').map((char) {
+    return value.split('').map((char) {
       final index = western.indexOf(char);
       return index == -1 ? char : persian[index];
     }).join();
@@ -22,7 +24,7 @@ class PersianNumberFormatter {
       groups.insert(0, raw.substring(start, end));
       end = start;
     }
-    final formatted = groups.map((group) => digits(int.parse(group))).join('٬');
+    final formatted = groups.map(digitsText).join('٬');
     return (negative ? '−' : '') + formatted + ' تومان';
   }
 
