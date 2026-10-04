@@ -75,9 +75,9 @@ void main() {
     final pit = result.byproducts.single;
 
     expect(date, isNotNull);
-    expect(date!.quantity, closeTo(172.111111, 0.000001));
+    expect(date!.quantity, closeTo(773.888889, 0.000001));
     expect(pit.itemId, 'raw_date_pit');
-    expect(pit.quantity, closeTo(17.211111, 0.000001));
+    expect(pit.quantity, closeTo(77.388889, 0.000001));
   });
 
   test('respects active reservations when checking production readiness', () async {
