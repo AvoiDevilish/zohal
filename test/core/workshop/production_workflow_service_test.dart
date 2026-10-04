@@ -275,4 +275,58 @@ void main() {
 
     expect(first.execution.executed, isTrue);
   });
+
+  test(
+    'does not consume costing when inventory execution fails',
+    () async {
+      await addCostLayer(
+        id: 'date-layer',
+        materialId: 'date',
+        materialName: 'خرما',
+        quantity: 2000,
+        unit: 'g',
+        unitCost: 10,
+      );
+      await addCostLayer(
+        id: 'box-layer',
+        materialId: 'box',
+        materialName: 'ظرف',
+        quantity: 20,
+        unit: 'unit',
+        unitCost: 500,
+      );
+
+      expect(
+        () => service.execute(
+          batch: batch(),
+          calculation: calculation(),
+        ),
+        throwsStateError,
+      );
+
+      expect(
+        await allocationStore.getAllocations(
+          referenceId: batch().id,
+        ),
+        isEmpty,
+      );
+      expect(
+        (await costLayerStore.getById('date-layer'))!.remainingQuantity,
+        2000,
+      );
+      expect(
+        (await costLayerStore.getById('box-layer'))!.remainingQuantity,
+        20,
+      );
+      expect(
+        await costStore.getByProductionId(batch().id),
+        isNull,
+      );
+      expect(
+        await batchStore.getById(batch().id),
+        isNull,
+      );
+    },
+  );
+
 }
