@@ -1,0 +1,105 @@
+import 'financial_account.dart';
+import 'financial_entry.dart';
+import 'financial_store.dart';
+import '../sales/sales_delivery.dart';
+
+class SalesFinancialService {
+  final FinancialStore store;
+
+  const SalesFinancialService({required this.store});
+
+  Future<FinancialTransaction> postSaleReceivable(
+    SalesDelivery delivery, {
+    required String customerName,
+  }) async {
+    final transactionId = 'sale-' + delivery.id;
+    final existing = await store.getTransaction(transactionId);
+    if (existing != null) return existing;
+
+    final customerAccountId = 'customer-' + delivery.customerId;
+    await store.ensureAccount(FinancialAccount(
+      id: customerAccountId,
+      name: customerName,
+      type: FinancialAccountType.customer,
+    ));
+    await store.ensureAccount(const FinancialAccount(
+      id: 'sales-revenue',
+      name: 'فروش',
+      type: FinancialAccountType.salesRevenue,
+    ));
+
+    final transaction = FinancialTransaction(
+      id: transactionId,
+      createdAt: delivery.createdAt,
+      type: 'sale',
+      referenceId: delivery.id,
+      note: 'ثبت فروش تحویل ' + delivery.id,
+      entries: [
+        FinancialEntry(
+          accountId: customerAccountId,
+          amount: delivery.totalAmount,
+          isDebit: true,
+          note: 'بدهی مشتری بابت تحویل',
+        ),
+        FinancialEntry(
+          accountId: 'sales-revenue',
+          amount: delivery.totalAmount,
+          isDebit: false,
+          note: 'درآمد فروش',
+        ),
+      ],
+    );
+    await store.addTransaction(transaction);
+    return transaction;
+  }
+
+  Future<FinancialTransaction> recordReceipt({
+    required String receiptId,
+    required String customerId,
+    required String customerName,
+    required int amount,
+    String? note,
+  }) async {
+    if (amount <= 0) throw ArgumentError('مبلغ دریافت باید بیشتر از صفر باشد.');
+
+    final transactionId = 'receipt-' + receiptId;
+    final existing = await store.getTransaction(transactionId);
+    if (existing != null) return existing;
+
+    final customerAccountId = 'customer-' + customerId;
+    await store.ensureAccount(FinancialAccount(
+      id: customerAccountId,
+      name: customerName,
+      type: FinancialAccountType.customer,
+    ));
+    await store.ensureAccount(const FinancialAccount(
+      id: 'cash',
+      name: 'صندوق',
+      type: FinancialAccountType.cash,
+    ));
+
+    final transaction = FinancialTransaction(
+      id: transactionId,
+      createdAt: DateTime.now(),
+      type: 'receipt',
+      referenceId: receiptId,
+      note: note,
+      entries: [
+        FinancialEntry(
+          accountId: 'cash',
+          amount: amount,
+          isDebit: true,
+          note: 'دریافت وجه',
+        ),
+        FinancialEntry(
+          accountId: customerAccountId,
+          amount: amount,
+          isDebit: false,
+          note: 'تسویه بدهی مشتری',
+        ),
+      ],
+    );
+    await store.addTransaction(transaction);
+    return transaction;
+  }
+}
