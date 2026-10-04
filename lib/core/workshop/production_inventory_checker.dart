@@ -10,14 +10,32 @@ class ProductionInventoryChecker {
   });
 
   Future<ProductionStockCheck> check(
-    ProductionCalculation calculation,
-  ) async {
+    ProductionCalculation calculation, {
+    String? reservationReferenceId,
+  }) async {
     final items = <ProductionStockCheckItem>[];
 
     for (final requirement in calculation.requirements) {
-      final available = await inventoryStore.getAvailableStock(
+      var available = await inventoryStore.getAvailableStock(
         requirement.materialId,
       );
+
+      if (reservationReferenceId != null) {
+        final ownReservations = await inventoryStore.getReservations(
+          itemId: requirement.materialId,
+          activeOnly: true,
+        );
+        available += ownReservations
+            .where(
+              (reservation) =>
+                  reservation.referenceId == reservationReferenceId,
+            )
+            .fold<double>(
+              0,
+              (sum, reservation) => sum + reservation.quantity,
+            );
+      }
+
       final shortage = requirement.quantity > available
           ? requirement.quantity - available
           : 0.0;
