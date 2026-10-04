@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/sales/customer.dart';
+import '../../../../core/sales/customer_store.dart';
+import '../../../../core/sales/supplier.dart';
+import '../../../../core/sales/supplier_store.dart';
 import '../../../../core/sales/sales_order.dart';
 import '../../../../core/sales/sales_order_store.dart';
 import '../../../../core/utils/persian_number_formatter.dart';
@@ -30,11 +34,122 @@ class PersonProfilePage extends StatefulWidget {
 class _PersonProfilePageState extends State<PersonProfilePage> {
   List<SalesOrder> _orders = [];
   bool _loading = true;
+  late String _name;
+  String? _phone;
+  String? _notes;
 
   @override
   void initState() {
     super.initState();
+    _name = widget.name;
+    _phone = widget.phone;
+    _notes = widget.notes;
     _load();
+  }
+
+  Future<void> _editPerson() async {
+    final nameController = TextEditingController(text: _name);
+    final phoneController = TextEditingController(text: _phone ?? '');
+    final notesController = TextEditingController(text: _notes ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<_PersonEditResult>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text(widget.type == PersonType.customer ? 'ویرایش مشتری' : 'ویرایش تأمین‌کننده'),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    textAlign: TextAlign.right,
+                    autofocus: true,
+                    decoration: const InputDecoration(labelText: 'نام'),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'نام را وارد کنید'
+                        : null,
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: phoneController,
+                    textAlign: TextAlign.right,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(labelText: 'تلفن'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: notesController,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(labelText: 'یادداشت'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('انصراف'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (!formKey.currentState!.validate()) return;
+                Navigator.pop(
+                  dialogContext,
+                  _PersonEditResult(
+                    name: nameController.text.trim(),
+                    phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                    notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
+                  ),
+                );
+              },
+              child: const Text('ذخیره'),
+            ),
+          ],
+        ),
+      ),
+    );
+    nameController.dispose();
+    phoneController.dispose();
+    notesController.dispose();
+
+    if (result == null || !mounted) return;
+
+    if (widget.type == PersonType.customer) {
+      final current = Customer(
+        id: widget.personId,
+        name: result.name,
+        phone: result.phone,
+        notes: result.notes,
+      );
+      await CustomerStore.instance.upsert(current);
+    } else {
+      final currentRows = await SupplierStore.instance.getAll();
+      final existing = currentRows.where((item) => item.id == widget.personId).firstOrNull;
+      if (existing != null) {
+        await SupplierStore.instance.upsert(
+          Supplier(
+            id: existing.id,
+            name: result.name,
+            phone: result.phone,
+            notes: result.notes,
+            isActive: existing.isActive,
+          ),
+        );
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _name = result.name;
+      _phone = result.phone;
+      _notes = result.notes;
+    });
   }
 
   Future<void> _load() async {
@@ -60,8 +175,19 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
         .where((order) => order.status == SalesOrderStatus.delivered)
         .fold<int>(0, (sum, order) => sum + order.totalAmount);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.name)),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+      appBar: AppBar(
+        title: Text(_name, textAlign: TextAlign.right),
+        actions: [
+          IconButton(
+            onPressed: _editPerson,
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'ویرایش',
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
@@ -82,15 +208,18 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                widget.name,
+                                _name,
                                 style: const TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
-                              Text(isCustomer ? 'مشتری' : 'تأمین‌کننده'),
-                              if (widget.phone != null && widget.phone!.isNotEmpty)
-                                Text(widget.phone!),
+                              Text(
+                                isCustomer ? 'مشتری' : 'تأمین‌کننده',
+                                textAlign: TextAlign.right,
+                              ),
+                              if (_phone != null && _phone!.isNotEmpty)
+                                Text(_phone!, textAlign: TextAlign.right),
                             ],
                           ),
                         ),
@@ -128,11 +257,11 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
                         : 'هنوز تراکنش مالی ثبت نشده',
                     subtitle: 'جزئیات دریافت، بدهی و تسویه از هسته مالی تغذیه خواهد شد.',
                   ),
-                  if (widget.notes != null && widget.notes!.isNotEmpty) ...[
+                  if (_notes != null && _notes!.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     ZohalCard(
                       child: Text(
-                        'یادداشت: ' + widget.notes!,
+                        'یادداشت: ' + _notes!,
                         style: const TextStyle(color: Colors.black54),
                       ),
                     ),
@@ -173,8 +302,21 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
                 ],
               ),
       ),
+      );
     );
   }
+}
+
+class _PersonEditResult {
+  const _PersonEditResult({
+    required this.name,
+    this.phone,
+    this.notes,
+  });
+
+  final String name;
+  final String? phone;
+  final String? notes;
 }
 
 class _ReportCard extends StatelessWidget {
@@ -194,14 +336,15 @@ class _ReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return ZohalCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Icon(icon),
           const SizedBox(height: 8),
-          Text(title, style: const TextStyle(color: Colors.black54)),
+          Text(title, textAlign: TextAlign.right, style: const TextStyle(color: Colors.black54)),
           const SizedBox(height: 4),
           Text(
             value,
+            textAlign: TextAlign.right,
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
           ),
           if (subtitle != null) ...[
