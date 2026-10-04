@@ -96,10 +96,7 @@ void main() {
       InventoryReservation(
         id: 'reservation-date',
         itemId: 'raw_date_khesht',
-        itemName: 'خرما خشت',
         quantity: 900,
-        unit: 'گرم',
-        referenceType: 'sales-order',
         referenceId: 'another-order',
         createdAt: DateTime(2026, 10, 5),
       ),
