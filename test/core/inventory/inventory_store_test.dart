@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zohal_android_test/core/inventory/inventory_movement.dart';
+import 'package:zohal_android_test/core/inventory/inventory_reservation.dart';
 import 'package:zohal_android_test/core/inventory/inventory_store.dart';
 
 void main() {
@@ -58,6 +59,119 @@ void main() {
       final stock = await store.getStock('material-date');
 
       expect(stock, 14);
+    });
+
+    test('rejects duplicate movement ids', () async {
+      final store = InventoryStore.instance;
+      final movement = InventoryMovement(
+        id: 'movement-duplicate',
+        itemId: 'material-date',
+        itemName: 'خرما',
+        itemType: 'raw_material',
+        quantity: 10,
+        unit: 'kg',
+        movementType: InventoryMovementType.purchase,
+        timestamp: DateTime(2026, 9, 17),
+      );
+
+      await store.addMovement(movement);
+
+      await expectLater(
+        store.addMovement(movement),
+        throwsA(isA<StateError>()),
+      );
+
+      expect((await store.getMovements()).length, 1);
+    });
+
+    test('rejects duplicate movement ids inside one batch', () async {
+      final store = InventoryStore.instance;
+      final movement = InventoryMovement(
+        id: 'movement-batch-duplicate',
+        itemId: 'material-date',
+        itemName: 'خرما',
+        itemType: 'raw_material',
+        quantity: 10,
+        unit: 'kg',
+        movementType: InventoryMovementType.purchase,
+        timestamp: DateTime(2026, 9, 17),
+      );
+
+      await expectLater(
+        store.addMovements([movement, movement]),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(await store.getMovements(), isEmpty);
+    });
+
+    test('is idempotent for an identical reservation id', () async {
+      final store = InventoryStore.instance;
+      await store.addMovement(
+        InventoryMovement(
+          id: 'movement-reservation-stock',
+          itemId: 'material-date',
+          itemName: 'خرما',
+          itemType: 'raw_material',
+          quantity: 10,
+          unit: 'kg',
+          movementType: InventoryMovementType.purchase,
+          timestamp: DateTime(2026, 9, 17),
+        ),
+      );
+
+      final reservation = InventoryReservation(
+        id: 'reservation-001',
+        itemId: 'material-date',
+        quantity: 4,
+        referenceId: 'order-001',
+        createdAt: DateTime(2026, 9, 17),
+      );
+
+      await store.reserve(reservation);
+      await store.reserve(reservation);
+
+      expect((await store.getReservations()).length, 1);
+      expect(await store.getReservedStock('material-date'), 4);
+    });
+
+    test('rejects reusing a reservation id for different data', () async {
+      final store = InventoryStore.instance;
+      await store.addMovement(
+        InventoryMovement(
+          id: 'movement-reservation-stock',
+          itemId: 'material-date',
+          itemName: 'خرما',
+          itemType: 'raw_material',
+          quantity: 10,
+          unit: 'kg',
+          movementType: InventoryMovementType.purchase,
+          timestamp: DateTime(2026, 9, 17),
+        ),
+      );
+
+      await store.reserve(
+        InventoryReservation(
+          id: 'reservation-001',
+          itemId: 'material-date',
+          quantity: 4,
+          referenceId: 'order-001',
+          createdAt: DateTime(2026, 9, 17),
+        ),
+      );
+
+      await expectLater(
+        store.reserve(
+          InventoryReservation(
+            id: 'reservation-001',
+            itemId: 'material-date',
+            quantity: 5,
+            referenceId: 'order-002',
+            createdAt: DateTime(2026, 9, 17),
+          ),
+        ),
+        throwsA(isA<StateError>()),
+      );
     });
 
     test('persists and reloads movement history', () async {
