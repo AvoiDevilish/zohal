@@ -1,10 +1,48 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/design/app_colors.dart';
+import '../../../../core/design/app_spacing.dart';
+import '../../../../core/sales/sales_order.dart';
+import '../../../../core/sales/sales_order_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
+import '../../../people/presentation/pages/people_page.dart';
+import '../../../sales/presentation/pages/sales_order_page.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  final _orders = SalesOrderStore.instance;
+  int orderCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    final rows = await _orders.getAll();
+    if (!mounted) return;
+    setState(() => orderCount = rows.length);
+  }
+
+  Future<void> openOrders() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const SalesOrderPage()),
+    );
+    await load();
+  }
+
+  Future<void> openPeople() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const PeoplePage()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +60,6 @@ class DashboardPage extends StatelessWidget {
             style: TextStyle(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 20),
-
           _DashboardCard(
             icon: Icons.point_of_sale_outlined,
             title: 'فروش امروز',
@@ -37,7 +74,6 @@ class DashboardPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-
           Row(
             children: [
               Expanded(
@@ -66,21 +102,21 @@ class DashboardPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-
           _DashboardCard(
             icon: Icons.people_outline,
             title: 'اشخاص',
-            onTap: () {},
-            child: const Row(
+            onTap: openPeople,
+            child: Row(
               children: [
                 Expanded(child: _PersonMetric(title: 'مشتریان', value: '—')),
-                VerticalDivider(width: 1),
-                Expanded(child: _PersonMetric(title: 'تأمین‌کنندگان', value: '—')),
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: _PersonMetric(title: 'تأمین‌کنندگان', value: '—'),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 12),
-
           _DashboardCard(
             icon: Icons.inventory_2_outlined,
             title: 'موجودی‌ها',
@@ -94,7 +130,6 @@ class DashboardPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-
           const Text(
             'دسترسی سریع',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
@@ -106,7 +141,7 @@ class DashboardPage extends StatelessWidget {
                 child: _QuickAction(
                   icon: Icons.add_shopping_cart,
                   title: 'ثبت سفارش',
-                  onTap: () {},
+                  onTap: openOrders,
                 ),
               ),
               const SizedBox(width: 12),
@@ -158,7 +193,10 @@ class _DashboardCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                   const Icon(Icons.chevron_left_rounded),
@@ -206,7 +244,10 @@ class _PersonMetric extends StatelessWidget {
       children: [
         Text(title, style: const TextStyle(color: AppColors.textSecondary)),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
       ],
     );
   }
