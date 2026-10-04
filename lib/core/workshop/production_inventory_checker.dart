@@ -12,12 +12,29 @@ class ProductionInventoryChecker {
   Future<ProductionStockCheck> check(
     ProductionCalculation calculation,
   ) async {
-    final stockByMaterialId =
-        await inventoryStore.getAllStocks();
+    final items = <ProductionStockCheckItem>[];
 
-    return const ProductionStockChecker().check(
-      calculation: calculation,
-      stockByMaterialId: stockByMaterialId,
+    for (final requirement in calculation.requirements) {
+      final available = await inventoryStore.getAvailableStock(
+        requirement.materialId,
+      );
+      final shortage = requirement.quantity > available
+          ? requirement.quantity - available
+          : 0.0;
+
+      items.add(
+        ProductionStockCheckItem(
+          materialId: requirement.materialId,
+          materialName: requirement.materialName,
+          requiredQuantity: requirement.quantity,
+          availableQuantity: available,
+          shortageQuantity: shortage,
+        ),
+      );
+    }
+
+    return ProductionStockCheck(
+      items: List.unmodifiable(items),
     );
   }
 }
