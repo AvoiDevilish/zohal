@@ -9,6 +9,7 @@ import 'package:zohal_android_test/core/sales/sales_receipt_store.dart';
 import 'package:zohal_android_test/core/sales/sales_return_store.dart';
 import 'package:zohal_android_test/core/sales/sales_return.dart';
 import 'package:zohal_android_test/core/sales/sales_credit_allocation_store.dart';
+import 'package:zohal_android_test/core/sales/sales_credit_entry_store.dart';
 import 'package:zohal_android_test/core/sales/customer.dart';
 import 'package:zohal_android_test/core/sales/customer_store.dart';
 
@@ -23,6 +24,7 @@ void main() {
     await SalesReceiptStore.instance.clear();
     await SalesReturnStore.instance.clear();
     await SalesCreditAllocationStore.instance.clear();
+    await SalesCreditEntryStore.instance.clear();
     await CustomerStore.instance.clear();
   });
 
@@ -361,6 +363,36 @@ void main() {
     expect(await store.getBalance('customer-customer-credit-2'), 150000);
     expect(await SalesCreditAllocationStore.instance.getByOrderId('invoice-credit-target'), hasLength(1));
   });
+
+  test('return on an unpaid invoice does not create reusable customer credit', () async {
+    final service = SalesFinancialService(store: store);
+    final delivery = SalesDelivery(
+      id: 'delivery-unpaid-return',
+      orderId: 'invoice-unpaid-return',
+      customerId: 'customer-unpaid-return',
+      createdAt: DateTime(2026, 10, 5),
+      lines: const [],
+      totalAmount: 200000,
+    );
+    await SalesDeliveryStore.instance.add(delivery);
+    await service.postSaleReceivable(delivery, customerName: 'مشتری نسیه');
+    final salesReturn = SalesReturn(
+      id: 'return-unpaid-return',
+      deliveryId: delivery.id,
+      orderId: delivery.orderId,
+      customerId: delivery.customerId,
+      customerName: 'مشتری نسیه',
+      createdAt: DateTime(2026, 10, 5),
+      lines: const [],
+      totalAmount: 50000,
+    );
+    await SalesReturnStore.instance.add(salesReturn);
+    await service.postSaleReturn(salesReturn, customerName: 'مشتری نسیه');
+
+    expect(await service.getCustomerCredit('customer-unpaid-return'), 0);
+    expect(await store.getBalance('customer-customer-unpaid-return'), 150000);
+  });
+
 
   test('customer credit allocation cannot exceed available credit or invoice balance', () async {
     final service = SalesFinancialService(store: store);
