@@ -40,19 +40,29 @@ class SalesReturnService {
       throw ArgumentError('حداقل یک قلم برای برگشت لازم است.');
     }
 
+    final storedDelivery = await deliveryStore.getById(sourceDelivery.id);
+    if (storedDelivery == null) {
+      throw StateError('تحویل موردنظر پیدا نشد.');
+    }
+    if (storedDelivery.orderId != sourceDelivery.orderId ||
+        storedDelivery.customerId != sourceDelivery.customerId) {
+      throw StateError('اطلاعات تحویل با سابقه ثبت‌شده همخوانی ندارد.');
+    }
+
+    final sourceDelivery = storedDelivery;
     final existingReturn = await returnStore.getById(returnId);
     if (existingReturn != null) {
-      if (existingReturn.deliveryId != delivery.id) {
+      if (existingReturn.deliveryId != sourceDelivery.id) {
         throw StateError('شناسه برگشت برای تحویل دیگری استفاده شده است.');
       }
       return SalesReturnResult(salesReturn: existingReturn, changed: false);
     }
 
     final deliveryLines = {
-      for (final line in delivery.lines) line.productVariantId: line,
+      for (final line in sourceDelivery.lines) line.productVariantId: line,
     };
     final alreadyReturned = <String, int>{};
-    for (final salesReturn in await returnStore.getByDeliveryId(delivery.id)) {
+    for (final salesReturn in await returnStore.getByDeliveryId(sourceDelivery.id)) {
       for (final line in salesReturn.lines) {
         alreadyReturned.update(
           line.productVariantId,
@@ -102,7 +112,7 @@ class SalesReturnService {
         movementType: InventoryMovementType.saleReturn,
         timestamp: now,
         referenceId: returnId,
-        note: 'برگشت فروش از تحویل ' + delivery.id,
+        note: 'برگشت فروش از تحویل ' + sourceDelivery.id,
       );
     }).toList();
 
@@ -125,9 +135,9 @@ class SalesReturnService {
 
     final salesReturn = SalesReturn(
       id: returnId,
-      deliveryId: delivery.id,
-      orderId: delivery.orderId,
-      customerId: delivery.customerId,
+      deliveryId: sourceDelivery.id,
+      orderId: sourceDelivery.orderId,
+      customerId: sourceDelivery.customerId,
       customerName: customerName,
       createdAt: now,
       lines: requested.entries.map((entry) {
