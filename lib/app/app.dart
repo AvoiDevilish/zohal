@@ -1,12 +1,32 @@
 import 'package:flutter/material.dart';
 
 import '../core/design/app_theme.dart';
+import '../core/people/person_migration_service.dart';
+import '../core/people/person_store.dart';
+import '../core/sales/customer_store.dart';
+import '../core/sales/supplier_store.dart';
+import '../core/finance/financial_store.dart';
 import '../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../features/inventory/presentation/pages/inventory_page.dart';
 import '../features/workshop/presentation/screens/workshop_dashboard_screen.dart';
 
 class ZohalApp extends StatelessWidget {
   const ZohalApp({super.key});
+
+  @override
+  void initState() {
+    super.initState();
+    _migratePeople();
+  }
+
+  Future<void> _migratePeople() async {
+    await PersonMigrationService(
+      personStore: PersonStore.instance,
+      customerStore: CustomerStore.instance,
+      supplierStore: SupplierStore.instance,
+      financialStore: FinancialStore.instance,
+    ).migrateLegacyPeople();
+  }
 
   @override
   Widget build(BuildContext context) {
