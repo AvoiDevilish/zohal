@@ -88,6 +88,7 @@ void main() {
   test('reserves production materials exactly once', () async {
     await seedStock();
     final currentOrder = order();
+    await orderStore.create(currentOrder);
     final analysisResult = await analysis();
 
     final first = await service().reserve(currentOrder, analysisResult);
@@ -112,7 +113,7 @@ void main() {
 
     await service().reserve(currentOrder, analysisResult);
     final result = await service().startProduction(
-      order(status: SalesOrderStatus.inProduction),
+      order(status: SalesOrderStatus.materialsReserved),
       analysisResult,
     );
 
