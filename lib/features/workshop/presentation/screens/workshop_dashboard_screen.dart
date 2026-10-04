@@ -29,6 +29,7 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
   void initState() {
     super.initState();
     _future = _load();
+    _orderStore.addListener(_refresh);
   }
 
   Future<_WorkshopDashboardData> _load() async {
@@ -65,7 +66,14 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
   }
 
   void _refresh() {
+    if (!mounted) return;
     setState(() => _future = _load());
+  }
+
+  @override
+  void dispose() {
+    _orderStore.removeListener(_refresh);
+    super.dispose();
   }
 
   @override
@@ -113,6 +121,10 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
                     totalAmount: order.totalAmount,
                     status: SalesOrderStatus.workshopAnalyzing,
                   ));
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('سفارش وارد مرحله تحلیل کارگاه شد.')),
+                  );
                   _refresh();
                 },
               ),
