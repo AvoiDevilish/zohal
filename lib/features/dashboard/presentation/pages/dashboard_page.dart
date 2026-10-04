@@ -79,7 +79,7 @@ class _DashboardPageState extends State<DashboardPage> {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _MetricRow(label: 'تعداد فروش', value: orderCount.toString()),
+                const _MetricRow(label: 'تعداد فروش', value: orderCount.toString()),
                 _MetricRow(label: 'مجموع فروش', value: '— تومان'),
                 _MetricRow(label: 'سود امروز', value: '— تومان'),
               ],
