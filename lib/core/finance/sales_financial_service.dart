@@ -7,6 +7,8 @@ import '../sales/sales_delivery_store.dart';
 import '../sales/sales_return_store.dart';
 import '../sales/sales_receipt.dart';
 import '../sales/sales_receipt_store.dart';
+import '../sales/sales_credit_allocation.dart';
+import '../sales/sales_credit_allocation_store.dart';
 import '../sales/customer_store.dart';
 
 class SalesFinancialService {
@@ -104,6 +106,85 @@ class SalesFinancialService {
     return transaction;
   }
 
+  Future<int> getInvoiceOutstanding({
+    required String orderId,
+    required String customerId,
+  }) async {
+    final deliveries = await SalesDeliveryStore.instance.getByOrderId(orderId);
+    if (deliveries.isEmpty) {
+      throw StateError('فاکتور موردنظر پیدا نشد یا هنوز تحویلی برای آن ثبت نشده است.');
+    }
+    if (deliveries.any((delivery) => delivery.customerId != customerId)) {
+      throw StateError('فاکتور متعلق به این مشتری نیست.');
+    }
+
+    var invoiceTotal = 0;
+    for (final delivery in deliveries) {
+      invoiceTotal += delivery.totalAmount;
+      final returns = await SalesReturnStore.instance.getByDeliveryId(delivery.id);
+      invoiceTotal -= returns.fold<int>(0, (sum, item) => sum + item.totalAmount);
+    }
+
+    final receipts = await SalesReceiptStore.instance.getByOrderId(orderId);
+    final receiptsTotal = receipts.fold<int>(0, (sum, item) => sum + item.amount);
+    final credits = await SalesCreditAllocationStore.instance.getByOrderId(orderId);
+    final creditsTotal = credits.fold<int>(0, (sum, item) => sum + item.amount);
+
+    return invoiceTotal - receiptsTotal - creditsTotal;
+  }
+
+  Future<SalesCreditAllocation> applyCustomerCredit({
+    required String allocationId,
+    required String orderId,
+    required String customerId,
+    required int amount,
+    String? note,
+  }) async {
+    if (amount <= 0) {
+      throw ArgumentError('مبلغ استفاده از اعتبار باید بیشتر از صفر باشد.');
+    }
+
+    final allocationStore = SalesCreditAllocationStore.instance;
+    final existing = await allocationStore.getById(allocationId);
+    if (existing != null) {
+      if (existing.orderId != orderId || existing.customerId != customerId) {
+        throw StateError('شناسه تخصیص اعتبار برای مورد دیگری استفاده شده است.');
+      }
+      return existing;
+    }
+
+    final customerBalance = await store.getBalance('customer-' + customerId);
+    final availableCredit = customerBalance < 0 ? -customerBalance : 0;
+    if (availableCredit <= 0) {
+      throw StateError('این مشتری اعتبار قابل استفاده ندارد.');
+    }
+
+    final invoiceOutstanding = await getInvoiceOutstanding(
+      orderId: orderId,
+      customerId: customerId,
+    );
+    if (invoiceOutstanding <= 0) {
+      throw StateError('این فاکتور مانده قابل تسویه ندارد.');
+    }
+    if (amount > availableCredit) {
+      throw StateError('مبلغ استفاده از اعتبار بیشتر از اعتبار مشتری است.');
+    }
+    if (amount > invoiceOutstanding) {
+      throw StateError('مبلغ استفاده از اعتبار بیشتر از مانده فاکتور است.');
+    }
+
+    final allocation = SalesCreditAllocation(
+      id: allocationId,
+      orderId: orderId,
+      customerId: customerId,
+      amount: amount,
+      createdAt: DateTime.now(),
+      note: note,
+    );
+    await allocationStore.add(allocation);
+    return allocation;
+  }
+
   Future<FinancialTransaction> recordReceipt({
     required String receiptId,
     required String customerId,
@@ -122,28 +203,12 @@ class SalesFinancialService {
 
     final customerAccountId = 'customer-' + customerId;
     final receiptStore = SalesReceiptStore.instance;
-    final deliveryStore = SalesDeliveryStore.instance;
-    final returnStore = SalesReturnStore.instance;
-
     var invoiceOutstanding = await store.getBalance(customerAccountId);
     if (orderId != null) {
-      final deliveries = await deliveryStore.getByOrderId(orderId);
-      if (deliveries.isEmpty) {
-        throw StateError('فاکتور موردنظر پیدا نشد یا هنوز تحویلی برای آن ثبت نشده است.');
-      }
-      if (deliveries.any((delivery) => delivery.customerId != customerId)) {
-        throw StateError('فاکتور متعلق به این مشتری نیست.');
-      }
-
-      var invoiceTotal = 0;
-      for (final delivery in deliveries) {
-        invoiceTotal += delivery.totalAmount;
-        final returns = await returnStore.getByDeliveryId(delivery.id);
-        invoiceTotal -= returns.fold<int>(0, (sum, item) => sum + item.totalAmount);
-      }
-      final previousReceipts = await receiptStore.getByOrderId(orderId);
-      final allocated = previousReceipts.fold<int>(0, (sum, receipt) => sum + receipt.amount);
-      invoiceOutstanding = invoiceTotal - allocated;
+      invoiceOutstanding = await getInvoiceOutstanding(
+        orderId: orderId,
+        customerId: customerId,
+      );
       if (invoiceOutstanding <= 0) {
         throw StateError('این فاکتور بدهی قابل تسویه ندارد.');
       }
