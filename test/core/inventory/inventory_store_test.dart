@@ -174,6 +174,22 @@ void main() {
       );
     });
 
+    test('rejects unknown persisted movement types', () {
+      expect(
+        () => InventoryMovement.fromMap({
+          'id': 'movement-invalid',
+          'itemId': 'material-date',
+          'itemName': 'خرما',
+          'itemType': 'raw_material',
+          'quantity': 1,
+          'unit': 'kg',
+          'movementType': 'unknown_type',
+          'timestamp': DateTime(2026, 9, 17).toIso8601String(),
+        }),
+        throwsA(isA<StateError>()),
+      );
+    });
+
     test('persists and reloads movement history', () async {
       final store = InventoryStore.instance;
 
