@@ -10,9 +10,10 @@ class WorkshopDashboardScreen extends StatefulWidget {
 
   WorkshopDashboardScreen({
     super.key,
-    this.batchStore = ProductionBatchStore.instance,
-    this.costStore = ProductionCostStore.instance,
-  });
+    ProductionBatchStore? batchStore,
+    ProductionCostStore? costStore,
+  })  : batchStore = batchStore ?? ProductionBatchStore.instance,
+        costStore = costStore ?? ProductionCostStore.instance;
 
   @override
   State<WorkshopDashboardScreen> createState() => _WorkshopDashboardScreenState();
