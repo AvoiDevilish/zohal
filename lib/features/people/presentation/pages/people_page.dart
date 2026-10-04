@@ -312,6 +312,7 @@ class _CustomerDialogState extends State<_CustomerDialog> {
         name: name.text.trim(),
         phone: phone.text.trim().isEmpty ? null : phone.text.trim(),
         notes: notes.text.trim().isEmpty ? null : notes.text.trim(),
+        isActive: widget.existing?.isActive ?? true,
       ),
     );
   }
