@@ -2,6 +2,7 @@ import 'cost_allocation.dart' as allocation_model;
 import 'cost_allocation_store.dart';
 import 'costing_engine.dart';
 import 'costing_method.dart';
+import 'cost_layer.dart';
 import 'cost_layer_store.dart';
 
 class CostConsumptionResult {
