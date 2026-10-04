@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zohal_android_test/core/inventory/inventory_movement.dart';
 import 'package:zohal_android_test/core/inventory/inventory_store.dart';
+import 'package:zohal_android_test/core/sales/sales_delivery.dart';
 import 'package:zohal_android_test/core/sales/sales_delivery_service.dart';
 import 'package:zohal_android_test/core/sales/sales_delivery_store.dart';
 import 'package:zohal_android_test/core/sales/sales_order.dart';
@@ -108,6 +109,38 @@ void main() {
     expect(third.order.status, SalesOrderStatus.delivered);
     expect(await inventoryStore.getStock('energy-bar-100g-ginger'), 0);
     expect(await financialStore.getBalance('customer-customer-1'), 1000000);
+  });
+
+  test('retries an existing delivery and repairs missing financial posting', () async {
+    final current = order(status: SalesOrderStatus.readyForDelivery);
+    await orderStore.create(current);
+    final delivery = SalesDelivery(
+      id: 'delivery-recovery',
+      orderId: current.id,
+      customerId: current.customerId,
+      createdAt: current.orderDate,
+      lines: const [
+        SalesDeliveryLine(
+          productVariantId: 'energy-bar-100g-ginger',
+          productName: 'انرژی بار ۱۰۰ گرم زنجبیلی',
+          quantity: 4,
+          unitSellingPrice: 100000,
+          totalAmount: 400000,
+        ),
+      ],
+      totalAmount: 400000,
+    );
+    await deliveryStore.add(delivery);
+
+    final result = await service().deliver(
+      order: current,
+      deliveryId: delivery.id,
+      quantities: {'energy-bar-100g-ginger': 99},
+    );
+
+    expect(result.changed, isFalse);
+    expect(await financialStore.getBalance('customer-customer-1'), 400000);
+    expect(result.order.status, SalesOrderStatus.partiallyDelivered);
   });
 
   test('does not deliver more than remaining order quantity', () async {
