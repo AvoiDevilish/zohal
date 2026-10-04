@@ -10,131 +10,112 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
         children: [
           const Text(
-            'سلام 👋',
-            style: TextStyle(fontSize: 15, color: AppColors.textSecondary),
+            'خانه',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           const Text(
-            'مدیریت زحل',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+            'خلاصه وضعیت کسب‌وکار',
+            style: TextStyle(color: AppColors.textSecondary),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          ZohalCard(
-            padding: const EdgeInsets.all(22),
-            child: Column(
+          _DashboardCard(
+            icon: Icons.point_of_sale_outlined,
+            title: 'فروش امروز',
+            onTap: () {},
+            child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'فروش امروز',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '۲٬۴۸۰٬۰۰۰ تومان',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.yellow,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        '+۱۲٪',
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      '۸ سفارش امروز',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
+                _MetricRow(label: 'تعداد فروش', value: '—'),
+                _MetricRow(label: 'مجموع فروش', value: '— تومان'),
+                _MetricRow(label: 'سود امروز', value: '— تومان'),
               ],
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            children: [
-              Expanded(
-                child: _StatCard(
-                  title: 'موجودی',
-                  value: '۴۷',
-                  unit: 'بسته',
-                  icon: Icons.inventory_2_outlined,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatCard(
-                  title: 'مشتریان',
-                  value: '۱۲۸',
-                  unit: 'فعال',
-                  icon: Icons.people_outline,
-                ),
-              ),
-            ],
-          ),
-
           const SizedBox(height: 12),
 
           Row(
             children: [
               Expanded(
-                child: _StatCard(
-                  title: 'مطالبات',
-                  value: '۳.۲M',
-                  unit: 'تومان',
-                  icon: Icons.account_balance_wallet_outlined,
+                child: _DashboardCard(
+                  icon: Icons.arrow_downward_rounded,
+                  title: 'بستانکاری',
+                  onTap: () {},
+                  child: const Text(
+                    '— تومان',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _StatCard(
-                  title: 'سود ماه',
-                  value: '۱۲.۴M',
-                  unit: 'تومان',
-                  icon: Icons.trending_up,
+                child: _DashboardCard(
+                  icon: Icons.arrow_upward_rounded,
+                  title: 'بدهکاری',
+                  onTap: () {},
+                  child: const Text(
+                    '— تومان',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  ),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
 
-          const SizedBox(height: 24),
+          _DashboardCard(
+            icon: Icons.people_outline,
+            title: 'اشخاص',
+            onTap: () {},
+            child: const Row(
+              children: [
+                Expanded(child: _PersonMetric(title: 'مشتریان', value: '—')),
+                VerticalDivider(width: 1),
+                Expanded(child: _PersonMetric(title: 'تأمین‌کنندگان', value: '—')),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          _DashboardCard(
+            icon: Icons.inventory_2_outlined,
+            title: 'موجودی‌ها',
+            onTap: () {},
+            child: const Column(
+              children: [
+                _MetricRow(label: 'موجودی قابل فروش', value: '—'),
+                _MetricRow(label: 'مواد و اقلام', value: '—'),
+                _MetricRow(label: 'کمبودها', value: '—'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
 
           const Text(
             'دسترسی سریع',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 12),
-
           Row(
             children: [
               Expanded(
-                child: _Action(
+                child: _QuickAction(
                   icon: Icons.add_shopping_cart,
-                  title: 'فروش جدید',
+                  title: 'ثبت سفارش',
+                  onTap: () {},
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _Action(icon: Icons.factory_outlined, title: 'تولید'),
+                child: _QuickAction(
+                  icon: Icons.warning_amber_outlined,
+                  title: 'هشدار کمبود',
+                  onTap: () {},
+                ),
               ),
             ],
           ),
@@ -144,68 +125,129 @@ class DashboardPage extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.unit,
+class _DashboardCard extends StatelessWidget {
+  const _DashboardCard({
     required this.icon,
+    required this.title,
+    required this.child,
+    required this.onTap,
   });
 
-  final String title;
-  final String value;
-  final String unit;
   final IconData icon;
+  final String title;
+  final Widget child;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ZohalCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Semantics(
+      button: true,
+      label: title,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: ZohalCard(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_left_rounded),
+                ],
+              ),
+              const SizedBox(height: 14),
+              child,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricRow extends StatelessWidget {
+  const _MetricRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
         children: [
-          Icon(icon, size: 22),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
-          ),
-          Text(
-            unit,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-            ),
-          ),
+          Expanded(child: Text(label)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
         ],
       ),
     );
   }
 }
 
-class _Action extends StatelessWidget {
-  const _Action({required this.icon, required this.title});
+class _PersonMetric extends StatelessWidget {
+  const _PersonMetric({required this.title, required this.value});
 
-  final IconData icon;
   final String title;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return ZohalCard(
-      child: Column(
-        children: [
-          const SizedBox(height: 4),
-          Icon(icon, size: 28),
-          const SizedBox(height: 10),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        ],
+    return Column(
+      children: [
+        Text(title, style: const TextStyle(color: AppColors.textSecondary)),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+      ],
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: title,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: ZohalCard(
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
