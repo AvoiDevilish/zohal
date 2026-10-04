@@ -14,6 +14,8 @@ class ProductionWorkflowResult {
     required this.execution,
     required this.cost,
   });
+
+  Future<ProductionWorkflowResult> _executeInternal() async => this;
 }
 
 class ProductionWorkflowService {
@@ -29,17 +31,24 @@ class ProductionWorkflowService {
     required this.productionCostStore,
   });
 
-  /// Runs the accounting and inventory workflow for one production batch.
-  ///
-  /// Cost allocation is completed before inventory movements are written.
-  /// Both cost allocation and inventory execution are idempotent, so a retry
-  /// after a partial failure can resume without consuming the same cost twice.
+  /// Inventory is executed before costing so failed stock checks cannot consume
+  /// Cost Layers. Both phases are retry-safe.
   Future<ProductionWorkflowResult> execute({
     required ProductionBatch batch,
     required ProductionCalculation calculation,
   }) async {
-    var cost = await productionCostStore.getByProductionId(batch.id);
+    final execution = await productionService.executeBatch(
+      batch: batch,
+      calculation: calculation,
+    );
 
+    if (!execution.executed && !execution.alreadyExecuted) {
+      throw StateError(
+        'تولید به دلیل کمبود موجودی اجرا نشد و هزینه‌ای نباید ثبت شود.',
+      );
+    }
+
+    var cost = await productionCostStore.getByProductionId(batch.id);
     if (cost == null) {
       cost = await productionCostService.calculate(
         productionId: batch.id,
@@ -47,28 +56,18 @@ class ProductionWorkflowService {
       );
     }
 
-    final execution = await productionService.executeBatch(
-      batch: batch,
-      calculation: calculation,
-    );
-
     final persistedBatch = await productionBatchStore.getById(batch.id);
-
     if (persistedBatch == null) {
       await productionBatchStore.add(execution.batch);
     }
 
     final persistedCost = await productionCostStore.getByProductionId(batch.id);
-
     if (persistedCost == null) {
       await productionCostStore.add(cost);
     } else {
       cost = persistedCost;
     }
 
-    return ProductionWorkflowResult(
-      execution: execution,
-      cost: cost,
-    );
+    return ProductionWorkflowResult(execution: execution, cost: cost);
   }
 }
