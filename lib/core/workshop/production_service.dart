@@ -28,7 +28,6 @@ class ProductionService {
 
   const ProductionService({required this.inventoryStore});
 
-  /// اجرای سازگار با API قبلی.
   Future<ProductionExecutionResult> execute({
     required ProductionCalculation calculation,
     required String productId,
@@ -63,14 +62,9 @@ class ProductionService {
     }
 
     final readyBatch = const ProductionLifecycle().moveToReady(batch);
-
     return executeBatch(batch: readyBatch, calculation: calculation);
   }
 
-  /// اجرای واقعی یک Production Batch.
-  ///
-  /// شناسه Batch به عنوان referenceId تمام Movementهای تولید استفاده می‌شود.
-  /// بنابراین اجرای مجدد همان Batch قابل تشخیص است.
   Future<ProductionExecutionResult> executeBatch({
     required ProductionBatch batch,
     required ProductionCalculation calculation,
@@ -93,7 +87,6 @@ class ProductionService {
       final completedBatch = batch.copyWith(
         status: ProductionBatchStatus.completed,
       );
-
       return ProductionExecutionResult(
         productionId: batch.id,
         stockCheck: stockCheck,
@@ -114,7 +107,6 @@ class ProductionService {
 
     final lifecycle = const ProductionLifecycle();
     final inProductionBatch = lifecycle.start(batch);
-
     final timestamp = DateTime.now();
 
     final movements = <InventoryMovement>[
@@ -143,12 +135,24 @@ class ProductionService {
         referenceId: batch.id,
         note: 'خروجی تولید',
       ),
+      for (final byproduct in calculation.byproducts)
+        InventoryMovement(
+          id: '${batch.id}-byproduct-${byproduct.itemId}',
+          itemId: byproduct.itemId,
+          itemName: byproduct.itemName,
+          itemType: byproduct.itemType,
+          quantity: byproduct.quantity,
+          unit: byproduct.unit,
+          movementType: InventoryMovementType.productionOutput,
+          timestamp: timestamp,
+          referenceId: batch.id,
+          note: 'محصول جانبی قابل استفاده: ${byproduct.itemName}',
+        ),
     ];
 
     await inventoryStore.addMovements(movements);
 
     final completedBatch = lifecycle.complete(inProductionBatch);
-
     return ProductionExecutionResult(
       productionId: batch.id,
       stockCheck: stockCheck,
