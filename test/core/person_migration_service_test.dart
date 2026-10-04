@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zohal_android_test/core/finance/financial_store.dart';
+import 'package:zohal_android_test/core/finance/financial_account.dart';
 import 'package:zohal_android_test/core/people/person.dart';
 import 'package:zohal_android_test/core/people/person_migration_service.dart';
 import 'package:zohal_android_test/core/people/person_store.dart';
