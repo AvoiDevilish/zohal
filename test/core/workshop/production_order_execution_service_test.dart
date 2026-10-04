@@ -134,6 +134,7 @@ void main() {
   test('repeating production does not duplicate movements or output', () async {
     await seedStock();
     final currentOrder = order();
+    await orderStore.create(currentOrder);
     final analysisResult = await analysis();
 
     await service().reserve(currentOrder, analysisResult);
@@ -163,6 +164,7 @@ void main() {
     await stock('raw_date_khesht', 'خرما خشت', 100, 'گرم');
 
     final currentOrder = order();
+    await orderStore.create(currentOrder);
     final analysisResult = await analysis();
 
     expect(analysisResult.canProduce, isFalse);
