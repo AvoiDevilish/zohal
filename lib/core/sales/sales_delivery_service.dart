@@ -57,9 +57,33 @@ class SalesDeliveryService {
       if (existingDelivery.orderId != order.id) {
         throw StateError('شناسه تحویل برای سفارش دیگری استفاده شده است.');
       }
+
+      // Reconcile any previous partial completion: delivery may have been
+      // persisted before its financial entry or order status was persisted.
+      await financialService.postSaleReceivable(
+        existingDelivery,
+        customerName: order.customerName,
+      );
+
+      final currentOrder = await _getCurrentOrder(order.id);
+      final delivered = await _deliveredQuantities(order.id);
+      final fullyDelivered = currentOrder.lines.every(
+        (line) =>
+            (delivered[line.productVariantId] ?? 0) >= line.quantity,
+      );
+      final expectedStatus = fullyDelivered
+          ? SalesOrderStatus.delivered
+          : SalesOrderStatus.partiallyDelivered;
+      final reconciledOrder = currentOrder.status == expectedStatus
+          ? currentOrder
+          : _withStatus(currentOrder, expectedStatus);
+      if (reconciledOrder.status != currentOrder.status) {
+        await orderStore.update(reconciledOrder);
+      }
+
       return SalesDeliveryResult(
         delivery: existingDelivery,
-        order: await _getCurrentOrder(order.id),
+        order: reconciledOrder,
         changed: false,
       );
     }
