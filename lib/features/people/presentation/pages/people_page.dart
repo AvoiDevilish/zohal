@@ -6,6 +6,7 @@ import '../../../../core/sales/customer_store.dart';
 import '../../../../core/sales/supplier.dart';
 import '../../../../core/sales/supplier_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
+import 'person_profile_page.dart';
 
 class PeoplePage extends StatefulWidget {
   const PeoplePage({super.key});
@@ -189,6 +190,15 @@ class _PeoplePageState extends State<PeoplePage> {
                                 name: person.name,
                                 phone: person.phone,
                                 notes: person.notes,
+                                onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                                  builder: (_) => PersonProfilePage(
+                                    personId: person.id,
+                                    name: person.name,
+                                    type: PersonType.customer,
+                                    phone: person.phone,
+                                    notes: person.notes,
+                                  ),
+                                )),
                                 onEdit: () => editCustomer(person),
                                 onDeactivate: showInactive
                                     ? () => activateCustomer(person)
@@ -202,6 +212,15 @@ class _PeoplePageState extends State<PeoplePage> {
                               name: person.name,
                               phone: person.phone,
                               notes: person.notes,
+                              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                                builder: (_) => PersonProfilePage(
+                                  personId: person.id,
+                                  name: person.name,
+                                  type: PersonType.supplier,
+                                  phone: person.phone,
+                                  notes: person.notes,
+                                ),
+                              )),
                               onEdit: () => editSupplier(person),
                               onDeactivate: showInactive
                                   ? () => activateSupplier(person)
@@ -223,6 +242,7 @@ class _PersonCard extends StatelessWidget {
     required this.name,
     required this.phone,
     required this.notes,
+    required this.onTap,
     required this.onEdit,
     required this.onDeactivate,
     required this.actionLabel,
@@ -231,6 +251,7 @@ class _PersonCard extends StatelessWidget {
   final String name;
   final String? phone;
   final String? notes;
+  final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDeactivate;
   final String actionLabel;
@@ -241,6 +262,7 @@ class _PersonCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: ZohalCard(
         child: ListTile(
+          onTap: onTap,
           contentPadding: EdgeInsets.zero,
           leading: const CircleAvatar(
             child: Icon(Icons.person_outline),
