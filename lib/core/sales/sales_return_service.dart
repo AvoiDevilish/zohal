@@ -40,12 +40,12 @@ class SalesReturnService {
       throw ArgumentError('حداقل یک قلم برای برگشت لازم است.');
     }
 
-    final storedDelivery = await deliveryStore.getById(sourceDelivery.id);
+    final storedDelivery = await deliveryStore.getById(delivery.id);
     if (storedDelivery == null) {
       throw StateError('تحویل موردنظر پیدا نشد.');
     }
-    if (storedDelivery.orderId != sourceDelivery.orderId ||
-        storedDelivery.customerId != sourceDelivery.customerId) {
+    if (storedDelivery.orderId != delivery.orderId ||
+        storedDelivery.customerId != delivery.customerId) {
       throw StateError('اطلاعات تحویل با سابقه ثبت‌شده همخوانی ندارد.');
     }
 
