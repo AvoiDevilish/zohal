@@ -78,3 +78,77 @@ class Purchase {
     note: map['note'] as String?,
   );
 }
+
+
+class PurchaseReturnLine {
+  const PurchaseReturnLine({
+    required this.itemId,
+    required this.quantity,
+    required this.unitCost,
+  });
+
+  final String itemId;
+  final double quantity;
+  final int unitCost;
+
+  int get totalCost => (quantity * unitCost).round();
+
+  Map<String, dynamic> toMap() => {
+    'itemId': itemId,
+    'quantity': quantity,
+    'unitCost': unitCost,
+  };
+
+  factory PurchaseReturnLine.fromMap(Map<String, dynamic> map) => PurchaseReturnLine(
+    itemId: map['itemId'] as String,
+    quantity: (map['quantity'] as num).toDouble(),
+    unitCost: (map['unitCost'] as num).toInt(),
+  );
+}
+
+class PurchaseReturn {
+  const PurchaseReturn({
+    required this.id,
+    required this.purchaseId,
+    required this.supplierId,
+    required this.supplierName,
+    required this.createdAt,
+    required this.lines,
+    required this.totalAmount,
+    this.note,
+  });
+
+  final String id;
+  final String purchaseId;
+  final String supplierId;
+  final String supplierName;
+  final DateTime createdAt;
+  final List<PurchaseReturnLine> lines;
+  final int totalAmount;
+  final String? note;
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'purchaseId': purchaseId,
+    'supplierId': supplierId,
+    'supplierName': supplierName,
+    'createdAt': createdAt.toIso8601String(),
+    'lines': lines.map((line) => line.toMap()).toList(),
+    'totalAmount': totalAmount,
+    'note': note,
+  };
+
+  factory PurchaseReturn.fromMap(Map<String, dynamic> map) => PurchaseReturn(
+    id: map['id'] as String,
+    purchaseId: map['purchaseId'] as String,
+    supplierId: map['supplierId'] as String,
+    supplierName: map['supplierName'] as String,
+    createdAt: DateTime.parse(map['createdAt'] as String),
+    lines: (map['lines'] as List)
+        .whereType<Map>()
+        .map((line) => PurchaseReturnLine.fromMap(Map<String, dynamic>.from(line)))
+        .toList(),
+    totalAmount: (map['totalAmount'] as num).toInt(),
+    note: map['note'] as String?,
+  );
+}
