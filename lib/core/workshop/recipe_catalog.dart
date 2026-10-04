@@ -1,4 +1,5 @@
 import '../products/product_catalog.dart';
+import '../products/product_variant.dart';
 import 'packaging_rule.dart';
 import 'recipe.dart';
 import 'recipe_component.dart';
