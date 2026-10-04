@@ -76,10 +76,10 @@ class _DashboardPageState extends State<DashboardPage> {
             icon: Icons.point_of_sale_outlined,
             title: 'فروش امروز',
             onTap: () {},
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _MetricRow(label: 'تعداد فروش', value: orderCount.toString()),
+                _MetricRow(label: 'تعداد فروش', value: orderCount.toString()),
                 _MetricRow(label: 'مجموع فروش', value: '— تومان'),
                 _MetricRow(label: 'سود امروز', value: '— تومان'),
               ],
