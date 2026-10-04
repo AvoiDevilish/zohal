@@ -9,30 +9,33 @@ class ProductionCalculation {
   final int unitWeightGrams;
   final double totalWeightGrams;
   final List<ProductionRequirement> requirements;
+  final List<ProductionByproduct> byproducts;
 
   const ProductionCalculation({
     required this.units,
     required this.unitWeightGrams,
     required this.totalWeightGrams,
     required this.requirements,
+    this.byproducts = const [],
   });
 
   ProductionRequirement? findMaterial(String materialId) {
     for (final item in requirements) {
-      if (item.materialId == materialId) {
-        return item;
-      }
+      if (item.materialId == materialId) return item;
     }
+    return null;
+  }
 
+  ProductionByproduct? findByproduct(String itemId) {
+    for (final item in byproducts) {
+      if (item.itemId == itemId) return item;
+    }
     return null;
   }
 
   double get totalRequiredWeightGrams {
     return requirements.fold<double>(0, (sum, item) {
-      if (item.unit != 'گرم') {
-        return sum;
-      }
-
+      if (item.unit != 'گرم') return sum;
       return sum + item.quantity;
     });
   }
@@ -50,6 +53,8 @@ class ProductionCalculator {
     required List<NutAllocation> nutAllocations,
     required String sesameMaterialId,
     required String sesameMaterialName,
+    String? datePitMaterialId,
+    String? datePitMaterialName,
     String? flavorMaterialId,
     String? flavorMaterialName,
     List<PackagingRule> packagingRules = const [],
@@ -57,41 +62,37 @@ class ProductionCalculator {
     if (units <= 0) {
       throw ArgumentError('تعداد تولید باید بیشتر از صفر باشد.');
     }
-
     if (unitWeightGrams <= 0) {
       throw ArgumentError('وزن محصول باید بیشتر از صفر باشد.');
     }
-
     if (!recipe.isValid) {
       throw ArgumentError('فرمول محصول معتبر نیست.');
     }
 
     _validateNutAllocations(nutAllocations);
 
-    final double totalWeight = units.toDouble() * unitWeightGrams.toDouble();
-
+    final totalWeight = units.toDouble() * unitWeightGrams.toDouble();
     final flavoringWeight = totalWeight * recipe.flavoringPercentage / 100;
-
     final baseWeight = totalWeight - flavoringWeight;
-
-    final dateWeight = baseWeight * recipe.datePercentage / 100;
-
+    final dateMeatWeight = baseWeight * recipe.datePercentage / 100;
     final totalNutWeight = baseWeight * recipe.nutPercentage / 100;
-
     final sesameWeight = baseWeight * recipe.sesamePercentage / 100;
+
+    final wholeDateWeight =
+        dateMeatWeight * 100 / recipe.dateMeatYieldPercentage;
+    final pitWeight = wholeDateWeight - dateMeatWeight;
 
     final requirements = <ProductionRequirement>[
       ProductionRequirement(
         materialId: dateMaterialId,
         materialName: dateMaterialName,
-        quantity: dateWeight,
+        quantity: wholeDateWeight,
         unit: 'گرم',
       ),
     ];
 
     for (final allocation in nutAllocations) {
       final nutWeight = totalNutWeight * allocation.percentage / 100;
-
       requirements.add(
         ProductionRequirement(
           materialId: allocation.materialId,
@@ -139,11 +140,27 @@ class ProductionCalculator {
       );
     }
 
+    final byproducts = <ProductionByproduct>[];
+    if (datePitMaterialId != null &&
+        datePitMaterialName != null &&
+        pitWeight > 0) {
+      byproducts.add(
+        ProductionByproduct(
+          itemId: datePitMaterialId,
+          itemName: datePitMaterialName,
+          itemType: 'rawMaterial',
+          quantity: pitWeight,
+          unit: 'گرم',
+        ),
+      );
+    }
+
     return ProductionCalculation(
       units: units,
       unitWeightGrams: unitWeightGrams,
       totalWeightGrams: totalWeight,
       requirements: List.unmodifiable(requirements),
+      byproducts: List.unmodifiable(byproducts),
     );
   }
 
@@ -151,22 +168,17 @@ class ProductionCalculator {
     if (allocations.length != 3) {
       throw ArgumentError('برای هر محصول باید دقیقاً سه نوع مغز انتخاب شود.');
     }
-
     final ids = allocations.map((item) => item.materialId).toSet();
-
     if (ids.length != 3) {
       throw ArgumentError('سه نوع مغز باید متفاوت باشند.');
     }
-
     if (allocations.any((item) => item.percentage <= 0)) {
       throw ArgumentError('درصد هر مغز باید بیشتر از صفر باشد.');
     }
-
     final total = allocations.fold<double>(
       0,
       (sum, item) => sum + item.percentage,
     );
-
     if ((total - 100).abs() > 0.0001) {
       throw ArgumentError('مجموع درصد مغزها باید دقیقاً ۱۰۰٪ باشد.');
     }
