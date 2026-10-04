@@ -83,18 +83,20 @@ class ProductionOrderExecutionService {
     }
 
     final now = DateTime.now();
-    for (final requirement in requirements.values) {
-      await inventoryStore.reserve(
-        InventoryReservation(
-          id: _reservationId(order.id, requirement.materialId),
-          itemId: requirement.materialId,
-          quantity: requirement.quantity,
-          referenceId: order.id,
-          createdAt: now,
-          note: 'رزرو مواد برای سفارش ${order.id}',
-        ),
-      );
-    }
+    await inventoryStore.reserveAll(
+      requirements.values
+          .map(
+            (requirement) => InventoryReservation(
+              id: _reservationId(order.id, requirement.materialId),
+              itemId: requirement.materialId,
+              quantity: requirement.quantity,
+              referenceId: order.id,
+              createdAt: now,
+              note: 'رزرو مواد برای سفارش ${order.id}',
+            ),
+          )
+          .toList(),
+    );
 
     final updatedOrder = _withStatus(
       order,
