@@ -1,4 +1,6 @@
 import '../storage/local_store.dart';
+import '../people/person.dart';
+import '../people/person_store.dart';
 import 'supplier.dart';
 
 class SupplierStore {
@@ -24,6 +26,15 @@ class SupplierStore {
       _storageKey,
       suppliers.map((item) => item.toMap()).toList(),
     );
+    final person = await PersonStore.instance.getById(supplier.id);
+    await PersonStore.instance.upsert(Person(
+      id: supplier.id,
+      name: supplier.name,
+      roles: {...(person?.roles ?? const <PersonRole>{}), PersonRole.supplier},
+      phone: supplier.phone,
+      notes: supplier.notes,
+      isActive: supplier.isActive,
+    ));
   }
 
   Future<void> setActive(String id, bool active) async {
@@ -42,6 +53,10 @@ class SupplierStore {
       _storageKey,
       suppliers.map((item) => item.toMap()).toList(),
     );
+    final person = await PersonStore.instance.getById(id);
+    if (person != null) {
+      await PersonStore.instance.upsert(person.copyWith(isActive: active));
+    }
   }
 
   Future<void> deactivate(String id) async {
