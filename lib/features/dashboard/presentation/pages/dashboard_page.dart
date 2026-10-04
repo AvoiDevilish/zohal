@@ -75,130 +75,131 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return ClipRect(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.topCenter,
-              child: SizedBox(
-                width: constraints.maxWidth,
-                height: 720,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _DashboardCard(
-                        icon: Icons.point_of_sale_outlined,
-                        title: 'فروش امروز',
-                        onTap: () {},
-                        child: Column(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return ClipRect(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _DashboardCard(
+                          icon: Icons.point_of_sale_outlined,
+                          title: 'فروش امروز',
+                          onTap: () {},
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _MetricRow(label: 'تعداد فروش', value: orderCount.toString()),
+                              _MetricRow(label: 'مجموع فروش', value: '— تومان'),
+                              _MetricRow(label: 'سود امروز', value: '— تومان'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _MetricRow(label: 'تعداد فروش', value: orderCount.toString()),
-                            _MetricRow(label: 'مجموع فروش', value: '— تومان'),
-                            _MetricRow(label: 'سود امروز', value: '— تومان'),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _DashboardCard(
-                              icon: Icons.arrow_downward_rounded,
-                              title: 'بستانکاری',
-                              onTap: () {},
-                              child: const Text(
-                                '— تومان',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                            Expanded(
+                              child: _DashboardCard(
+                                icon: Icons.arrow_downward_rounded,
+                                title: 'بستانکاری',
+                                onTap: () {},
+                                child: const Text(
+                                  '— تومان',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _DashboardCard(
-                              icon: Icons.arrow_upward_rounded,
-                              title: 'بدهکاری',
-                              onTap: () {},
-                              child: const Text(
-                                '— تومان',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _DashboardCard(
+                                icon: Icons.arrow_upward_rounded,
+                                title: 'بدهکاری',
+                                onTap: () {},
+                                child: const Text(
+                                  '— تومان',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _DashboardCard(
-                        icon: Icons.people_outline,
-                        title: 'اشخاص',
-                        onTap: openPeople,
-                        child: Row(
-                          children: [
-                            Expanded(child: _PersonMetric(title: 'مشتریان', value: customerCount.toString())),
-                            const VerticalDivider(width: 1),
-                            Expanded(child: _PersonMetric(title: 'تأمین‌کنندگان', value: supplierCount.toString())),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      _DashboardCard(
-                        icon: Icons.sell_outlined,
-                        title: 'محصولات',
-                        onTap: openProducts,
-                        child: _MetricRow(label: 'محصولات فعال', value: productCount.toString()),
-                      ),
-                      const SizedBox(height: 8),
-                      _DashboardCard(
-                        icon: Icons.inventory_2_outlined,
-                        title: 'موجودی‌ها',
-                        onTap: () {},
-                        child: const Row(
+                        const SizedBox(height: 10),
+                        _DashboardCard(
+                          icon: Icons.people_outline,
+                          title: 'اشخاص',
+                          onTap: openPeople,
+                          child: Row(
+                            children: [
+                              Expanded(child: _PersonMetric(title: 'مشتریان', value: customerCount.toString())),
+                              const VerticalDivider(width: 1),
+                              Expanded(child: _PersonMetric(title: 'تأمین‌کنندگان', value: supplierCount.toString())),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _DashboardCard(
+                          icon: Icons.sell_outlined,
+                          title: 'محصولات',
+                          onTap: openProducts,
+                          child: _MetricRow(label: 'محصولات فعال', value: productCount.toString()),
+                        ),
+                        const SizedBox(height: 10),
+                        _DashboardCard(
+                          icon: Icons.inventory_2_outlined,
+                          title: 'موجودی‌ها',
+                          onTap: () {},
+                          child: const Column(
+                            children: [
+                              _MetricRow(label: 'موجودی قابل فروش', value: '—'),
+                              _MetricRow(label: 'مواد و اقلام', value: '—'),
+                              _MetricRow(label: 'کمبودها', value: '—'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'دسترسی سریع',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
                           children: [
-                            Expanded(child: _MetricRow(label: 'موجودی قابل فروش', value: '—')),
-                            Expanded(child: _MetricRow(label: 'کمبودها', value: '—')),
+                            Expanded(
+                              child: _QuickAction(
+                                icon: Icons.add_shopping_cart,
+                                title: 'ثبت سفارش',
+                                onTap: openOrders,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _QuickAction(
+                                icon: Icons.warning_amber_outlined,
+                                title: 'هشدار کمبود',
+                                onTap: () {},
+                              ),
+                            ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'دسترسی سریع',
-                              textAlign: TextAlign.right,
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _QuickAction(
-                              icon: Icons.add_shopping_cart,
-                              title: 'ثبت سفارش',
-                              onTap: openOrders,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _QuickAction(
-                              icon: Icons.warning_amber_outlined,
-                              title: 'هشدار کمبود',
-                              onTap: () {},
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
