@@ -61,7 +61,14 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
       totalCost: totalCost,
       unitCost: unitCost,
       recent: recent.take(5).toList(),
-      incomingOrders: orders.where((order) => order.status == SalesOrderStatus.workshopPending || order.status == SalesOrderStatus.workshopAnalyzing).toList(),
+      incomingOrders: orders.where((order) => const {
+        SalesOrderStatus.workshopPending,
+        SalesOrderStatus.workshopAnalyzing,
+        SalesOrderStatus.readyForProduction,
+        SalesOrderStatus.materialsReserved,
+        SalesOrderStatus.inProduction,
+        SalesOrderStatus.shortage,
+      }.contains(order.status)).toList(),
     );
   }
 
@@ -248,6 +255,12 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
                   onAnalyze: (order) async {
                     await _analyzeOrder(order);
                   },
+                  onReserve: (order) async {
+                    await _reserveOrder(order);
+                  },
+                  onStartProduction: (order) async {
+                    await _startProduction(order);
+                  },
                 ),
                 const SizedBox(height: 16),
                 _Section(
@@ -325,32 +338,90 @@ class _WorkshopDashboardData {
 }
 
 class _IncomingOrders extends StatelessWidget {
-  const _IncomingOrders({required this.orders, required this.onAnalyze});
+  const _IncomingOrders({
+    required this.orders,
+    required this.onAnalyze,
+    required this.onReserve,
+    required this.onStartProduction,
+  });
+
   final List<SalesOrder> orders;
   final Future<void> Function(SalesOrder order) onAnalyze;
+  final Future<void> Function(SalesOrder order) onReserve;
+  final Future<void> Function(SalesOrder order) onStartProduction;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('سفارش‌های ورودی کارگاه', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          if (orders.isEmpty)
-            const Text('سفارش جدیدی در صف کارگاه نیست.')
-          else
-            ...orders.map((order) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('سفارش ' + order.id),
-              subtitle: Text(order.customerName + ' • ' + order.lines.length.toString() + ' ردیف • ' + order.status.title),
-              trailing: order.status == SalesOrderStatus.workshopPending
-                  ? FilledButton(onPressed: () => onAnalyze(order), child: const Text('تحلیل'))
-                  : const Chip(label: Text('در حال تحلیل')),
-            )),
-        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'سفارش‌های ورودی کارگاه',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            if (orders.isEmpty)
+              const Text('سفارشی در صف کارگاه نیست.')
+            else
+              ...orders.map(
+                (order) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('سفارش ' + order.id),
+                  subtitle: Text(
+                    order.customerName +
+                        ' • ' +
+                        order.lines.length.toString() +
+                        ' ردیف • ' +
+                        order.status.title,
+                  ),
+                  trailing: _action(order),
+                ),
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _action(SalesOrder order) {
+    switch (order.status) {
+      case SalesOrderStatus.workshopPending:
+        return FilledButton(
+          onPressed: () => onAnalyze(order),
+          child: const Text('تحلیل'),
+        );
+      case SalesOrderStatus.workshopAnalyzing:
+        return const Chip(label: Text('در حال تحلیل'));
+      case SalesOrderStatus.readyForProduction:
+        return FilledButton(
+          onPressed: () => onReserve(order),
+          child: const Text('رزرو مواد'),
+        );
+      case SalesOrderStatus.materialsReserved:
+        return FilledButton(
+          onPressed: () => onStartProduction(order),
+          child: const Text('شروع تولید'),
+        );
+      case SalesOrderStatus.inProduction:
+        return FilledButton(
+          onPressed: () => onStartProduction(order),
+          child: const Text('تکمیل تولید'),
+        );
+      case SalesOrderStatus.shortage:
+        return OutlinedButton(
+          onPressed: () => onAnalyze(order),
+          child: const Text('تحلیل مجدد'),
+        );
+      case SalesOrderStatus.productionCompleted:
+      case SalesOrderStatus.readyForDelivery:
+      case SalesOrderStatus.partiallyDelivered:
+      case SalesOrderStatus.delivered:
+      case SalesOrderStatus.cancelled:
+        return const SizedBox.shrink();
+    }
   }
 }
 
