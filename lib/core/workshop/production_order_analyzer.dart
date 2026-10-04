@@ -1,0 +1,180 @@
+import '../inventory/inventory_store.dart';
+import '../products/product_catalog.dart';
+import '../sales/sales_order.dart';
+import 'nut_allocation.dart';
+import 'production_calculator.dart';
+import 'production_inventory_checker.dart';
+import 'production_requirement.dart';
+import 'production_stock_check.dart';
+import 'recipe_catalog.dart';
+
+class ProductionOrderLineAnalysis {
+  final SalesOrderLine line;
+  final ProductionCalculation calculation;
+  final ProductionStockCheck stockCheck;
+
+  const ProductionOrderLineAnalysis({
+    required this.line,
+    required this.calculation,
+    required this.stockCheck,
+  });
+}
+
+class ProductionOrderAnalysis {
+  final String orderId;
+  final List<ProductionOrderLineAnalysis> lines;
+  final ProductionStockCheck stockCheck;
+  final List<ProductionByproduct> byproducts;
+
+  const ProductionOrderAnalysis({
+    required this.orderId,
+    required this.lines,
+    required this.stockCheck,
+    required this.byproducts,
+  });
+
+  bool get canProduce => stockCheck.canProduce;
+
+  List<ProductionStockCheckItem> get shortages => stockCheck.shortages;
+}
+
+class ProductionOrderAnalyzer {
+  final InventoryStore inventoryStore;
+
+  const ProductionOrderAnalyzer({
+    required this.inventoryStore,
+  });
+
+  Future<ProductionOrderAnalysis> analyze(SalesOrder order) async {
+    if (order.lines.isEmpty) {
+      throw StateError('سفارش فاقد ردیف تولید است.');
+    }
+
+    final lineAnalyses = <ProductionOrderLineAnalysis>[];
+
+    for (final line in order.lines) {
+      final product = ProductCatalog.findById(line.productVariantId);
+      final recipe = RecipeCatalog.findByProductVariantId(product.id);
+
+      final calculation = const ProductionCalculator().calculate(
+        recipe: recipe,
+        units: line.quantity,
+        unitWeightGrams: product.weightGrams,
+        dateMaterialId: RecipeCatalog.dateMaterialId,
+        dateMaterialName: RecipeCatalog.dateMaterialName,
+        datePitMaterialId: RecipeCatalog.datePitMaterialId,
+        datePitMaterialName: RecipeCatalog.datePitMaterialName,
+        nutAllocations: _defaultNutAllocations(),
+        sesameMaterialId: RecipeCatalog.sesameMaterialId,
+        sesameMaterialName: RecipeCatalog.sesameMaterialName,
+        flavorMaterialId: RecipeCatalog.flavorMaterialId(product.flavor),
+        flavorMaterialName: RecipeCatalog.flavorMaterialName(product.flavor),
+        packagingRules: RecipeCatalog.packagingRulesFor(product.id),
+      );
+
+      final stockCheck = await ProductionInventoryChecker(
+        inventoryStore: inventoryStore,
+      ).check(calculation);
+
+      lineAnalyses.add(
+        ProductionOrderLineAnalysis(
+          line: line,
+          calculation: calculation,
+          stockCheck: stockCheck,
+        ),
+      );
+    }
+
+    final aggregateCalculation = _aggregate(lineAnalyses);
+    final aggregateStockCheck = await ProductionInventoryChecker(
+      inventoryStore: inventoryStore,
+    ).check(aggregateCalculation);
+
+    return ProductionOrderAnalysis(
+      orderId: order.id,
+      lines: List.unmodifiable(lineAnalyses),
+      stockCheck: aggregateStockCheck,
+      byproducts: _aggregateByproducts(lineAnalyses),
+    );
+  }
+
+  ProductionCalculation _aggregate(
+    List<ProductionOrderLineAnalysis> lines,
+  ) {
+    final requirements = <String, ProductionRequirement>{};
+
+    for (final line in lines) {
+      for (final requirement in line.calculation.requirements) {
+        final current = requirements[requirement.materialId];
+
+        if (current == null) {
+          requirements[requirement.materialId] = requirement;
+        } else {
+          requirements[requirement.materialId] = ProductionRequirement(
+            materialId: current.materialId,
+            materialName: current.materialName,
+            quantity: current.quantity + requirement.quantity,
+            unit: current.unit,
+            type: current.type,
+          );
+        }
+      }
+    }
+
+    final totalUnits = lines.fold<int>(
+      0,
+      (sum, line) => sum + line.calculation.units,
+    );
+
+    final totalWeight = lines.fold<double>(
+      0,
+      (sum, line) => sum + line.calculation.totalWeightGrams,
+    );
+
+    return ProductionCalculation(
+      units: totalUnits,
+      unitWeightGrams: 0,
+      totalWeightGrams: totalWeight,
+      requirements: List.unmodifiable(requirements.values),
+    );
+  }
+
+  List<ProductionByproduct> _aggregateByproducts(
+    List<ProductionOrderLineAnalysis> lines,
+  ) {
+    final byproducts = <String, ProductionByproduct>{};
+
+    for (final line in lines) {
+      for (final byproduct in line.calculation.byproducts) {
+        final current = byproducts[byproduct.itemId];
+
+        if (current == null) {
+          byproducts[byproduct.itemId] = byproduct;
+        } else {
+          byproducts[byproduct.itemId] = ProductionByproduct(
+            itemId: current.itemId,
+            itemName: current.itemName,
+            itemType: current.itemType,
+            quantity: current.quantity + byproduct.quantity,
+            unit: current.unit,
+          );
+        }
+      }
+    }
+
+    return List.unmodifiable(byproducts.values);
+  }
+
+  List<NutAllocation> _defaultNutAllocations() {
+    return List.unmodifiable(
+      List.generate(
+        RecipeCatalog.defaultNutIds.length,
+        (index) => NutAllocation(
+          materialId: RecipeCatalog.defaultNutIds[index],
+          materialName: RecipeCatalog.defaultNutNames[index],
+          percentage: 100 / 3,
+        ),
+      ),
+    );
+  }
+}
