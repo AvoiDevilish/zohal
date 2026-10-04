@@ -69,7 +69,30 @@ class SalesFinancialService {
   }) async {
     final transactionId = 'sale-return-' + salesReturn.id;
     final existing = await store.getTransaction(transactionId);
-    if (existing != null) return existing;
+    if (existing != null) {
+      final creditStore = SalesCreditEntryStore.instance;
+      final existingCredit = await creditStore.getById('credit-' + salesReturn.id);
+      if (existingCredit == null) {
+        final balanceAfterReturn = await store.getBalance(
+          'customer-' + salesReturn.customerId,
+        );
+        final creditCreated =
+            balanceAfterReturn < 0 ? -balanceAfterReturn : 0;
+        if (creditCreated > 0) {
+          await creditStore.add(
+            SalesCreditEntry(
+              id: 'credit-' + salesReturn.id,
+              customerId: salesReturn.customerId,
+              amount: creditCreated,
+              createdAt: salesReturn.createdAt,
+              referenceId: salesReturn.id,
+              note: 'اعتبار ایجادشده از برگشت فروش',
+            ),
+          );
+        }
+      }
+      return existing;
+    }
 
     final customerAccountId = 'customer-' + salesReturn.customerId;
     final balanceBeforeReturn = await store.getBalance(customerAccountId);
@@ -226,7 +249,29 @@ class SalesFinancialService {
 
     final transactionId = 'receipt-' + receiptId;
     final existing = await store.getTransaction(transactionId);
-    if (existing != null) return existing;
+    if (existing != null) {
+      final existingReceipt = await SalesReceiptStore.instance.getById(
+        receiptId,
+      );
+      if (existingReceipt == null) {
+        final effectivePayerId = payerId ?? customerId;
+        final effectivePayerName = payerName ?? customerName;
+        await SalesReceiptStore.instance.add(
+          SalesReceipt(
+            id: receiptId,
+            orderId: orderId,
+            customerId: customerId,
+            customerName: customerName,
+            payerId: effectivePayerId,
+            payerName: effectivePayerName,
+            amount: amount,
+            createdAt: existing.createdAt,
+            note: note,
+          ),
+        );
+      }
+      return existing;
+    }
 
     final customerAccountId = 'customer-' + customerId;
     final receiptStore = SalesReceiptStore.instance;
