@@ -8,6 +8,7 @@ import '../../../../core/sales/product_variant_store.dart';
 import '../../../../core/sales/sales_order.dart';
 import '../../../../core/sales/sales_order_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
+import '../../../../core/utils/persian_number_formatter.dart';
 import '../../../people/presentation/pages/people_page.dart';
 
 class SalesOrderPage extends StatefulWidget {
@@ -77,15 +78,6 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
     );
   }
 
-  String money(int value) {
-    final raw = value.toString();
-    final buffer = StringBuffer();
-    for (var i = 0; i < raw.length; i++) {
-      if (i > 0 && (raw.length - i) % 3 == 0) buffer.write(',');
-      buffer.write(raw[i]);
-    }
-    return buffer.toString() + ' تومان';
-  }
 
   String date(DateTime value) {
     return value.year.toString() +
@@ -129,7 +121,7 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
                           Text('مشتری: ' + order.customerName),
                           Text('اقلام: ' + order.lines.length.toString() + ' ردیف'),
                           Text('تاریخ: ' + date(order.orderDate)),
-                          Text('مبلغ: ' + money(order.totalAmount)),
+                          Text('مبلغ: ' + PersianNumberFormatter.money(order.totalAmount)),
                           const SizedBox(height: 6),
                           Chip(label: Text(order.status.title)),
                         ],
@@ -276,10 +268,16 @@ class _NewOrderPageState extends State<_NewOrderPage> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
+                            isExpanded: true,
                             initialValue: line.productId,
                             decoration: const InputDecoration(labelText: 'محصول'),
                             items: options.map((item) => DropdownMenuItem(
-                              value: item.id, child: Text(item.displayName),
+                              value: item.id,
+                              child: Text(
+                                item.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             )).toList(),
                             onChanged: (value) {
                               if (value != null) setState(() => line.productId = value);
@@ -304,13 +302,13 @@ class _NewOrderPageState extends State<_NewOrderPage> {
                     Row(
                       children: [
                         const Expanded(child: Text('قیمت واحد')),
-                        Text(p.currentSellingPrice.toString() + ' تومان'),
+                        Text(PersianNumberFormatter.money(p.currentSellingPrice)),
                       ],
                     ),
                     Row(
                       children: [
                         const Expanded(child: Text('مبلغ ردیف')),
-                        Text((p.currentSellingPrice * q).toString() + ' تومان'),
+                        Text(PersianNumberFormatter.money(p.currentSellingPrice * q)),
                       ],
                     ),
                   ],
@@ -320,10 +318,25 @@ class _NewOrderPageState extends State<_NewOrderPage> {
           }),
           const Divider(),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Expanded(child: Text('مبلغ کل سفارش', style: TextStyle(fontWeight: FontWeight.w800))),
-              Text(total.toString() + ' تومان', style: const TextStyle(fontWeight: FontWeight.w900)),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  PersianNumberFormatter.money(total),
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ZohalCard(
+            child: Text(
+              'به حروف: ' + PersianNumberFormatter.words(total) + ' تومان',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
