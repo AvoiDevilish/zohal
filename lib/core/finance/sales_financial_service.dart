@@ -106,6 +106,11 @@ class SalesFinancialService {
     return transaction;
   }
 
+  Future<int> getCustomerCredit(String customerId) async {
+    final balance = await store.getBalance('customer-' + customerId);
+    return balance < 0 ? -balance : 0;
+  }
+
   Future<int> getInvoiceOutstanding({
     required String orderId,
     required String customerId,
