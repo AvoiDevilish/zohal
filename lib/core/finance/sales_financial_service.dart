@@ -107,8 +107,31 @@ class SalesFinancialService {
   }
 
   Future<int> getCustomerCredit(String customerId) async {
-    final balance = await store.getBalance('customer-' + customerId);
-    return balance < 0 ? -balance : 0;
+    final transactions = await store.getTransactions();
+    final returnedCredit = transactions
+        .where((transaction) =>
+            transaction.type == 'saleReturn' &&
+            transaction.entries.any(
+              (entry) =>
+                  entry.accountId == 'customer-' + customerId &&
+                  !entry.isDebit,
+            ))
+        .fold<int>(
+          0,
+          (sum, transaction) => sum +
+              transaction.entries
+                  .where(
+                    (entry) =>
+                        entry.accountId == 'customer-' + customerId &&
+                        !entry.isDebit,
+                  )
+                  .fold<int>(0, (entrySum, entry) => entrySum + entry.amount),
+        );
+    final allocatedCredit = (await SalesCreditAllocationStore.instance
+            .getByCustomerId(customerId))
+        .fold<int>(0, (sum, allocation) => sum + allocation.amount);
+    final available = returnedCredit - allocatedCredit;
+    return available > 0 ? available : 0;
   }
 
   Future<int> getInvoiceOutstanding({
