@@ -266,7 +266,7 @@ void main() {
       firstBoxRemaining,
     );
     expect(
-      await allocationStore.getAllocations(referenceId: batch().id),
+      await allocationStore.getAllocations(),
       hasLength(2),
     );
 
