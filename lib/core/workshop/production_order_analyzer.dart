@@ -74,7 +74,10 @@ class ProductionOrderAnalyzer {
 
       final stockCheck = await ProductionInventoryChecker(
         inventoryStore: inventoryStore,
-      ).check(calculation);
+      ).check(
+        calculation,
+        reservationReferenceId: order.id,
+      );
 
       lineAnalyses.add(
         ProductionOrderLineAnalysis(
@@ -88,7 +91,10 @@ class ProductionOrderAnalyzer {
     final aggregateCalculation = _aggregate(lineAnalyses);
     final aggregateStockCheck = await ProductionInventoryChecker(
       inventoryStore: inventoryStore,
-    ).check(aggregateCalculation);
+    ).check(
+      aggregateCalculation,
+      reservationReferenceId: order.id,
+    );
 
     return ProductionOrderAnalysis(
       orderId: order.id,
