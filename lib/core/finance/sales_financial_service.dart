@@ -215,4 +215,5 @@ class SalesFinancialService {
       note: note,
     ));
     return transaction;
-  }}
+  }
+}
