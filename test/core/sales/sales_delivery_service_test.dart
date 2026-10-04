@@ -90,6 +90,7 @@ void main() {
     expect(first.order.status, SalesOrderStatus.partiallyDelivered);
     expect(await inventoryStore.getStock('energy-bar-100g-ginger'), 6);
     expect(first.delivery.totalAmount, 400000);
+    expect(await financialStore.getBalance('customer-customer-1'), 400000);
 
     final second = await service().deliver(
       order: first.order,
@@ -106,6 +107,7 @@ void main() {
     );
     expect(third.order.status, SalesOrderStatus.delivered);
     expect(await inventoryStore.getStock('energy-bar-100g-ginger'), 0);
+    expect(await financialStore.getBalance('customer-customer-1'), 1000000);
   });
 
   test('does not deliver more than remaining order quantity', () async {
