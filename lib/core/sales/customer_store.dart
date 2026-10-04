@@ -1,6 +1,8 @@
 import '../storage/local_store.dart';
 import '../people/person.dart';
 import '../people/person_store.dart';
+import '../finance/financial_account.dart';
+import '../finance/financial_store.dart';
 import 'customer.dart';
 
 class CustomerStore {
@@ -34,6 +36,11 @@ class CustomerStore {
       phone: customer.phone,
       notes: customer.notes,
       isActive: customer.isActive,
+    ));
+    await FinancialStore.instance.ensureAccount(FinancialAccount(
+      id: 'customer-' + customer.id,
+      name: customer.name,
+      type: FinancialAccountType.customer,
     ));
   }
 
