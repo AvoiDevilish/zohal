@@ -54,4 +54,34 @@ void main() {
     expect(await store.getBalance('customer-customer-1'), 250000);
     expect(await store.getBalance('cash'), 150000);
   });
+  test('rejects receipt greater than outstanding balance', () async {
+    final service = SalesFinancialService(store: store);
+    await service.postSaleReceivable(delivery(), customerName: 'مشتری آزمایشی');
+
+    expect(
+      () => service.recordReceipt(
+        receiptId: 'receipt-over',
+        customerId: 'customer-1',
+        customerName: 'مشتری آزمایشی',
+        amount: 400001,
+      ),
+      throwsA(isA<StateError>()),
+    );
+    expect(await store.getBalance('customer-customer-1'), 400000);
+  });
+
+  test('rejects receipt when customer has no outstanding balance', () async {
+    final service = SalesFinancialService(store: store);
+
+    expect(
+      () => service.recordReceipt(
+        receiptId: 'receipt-none',
+        customerId: 'customer-1',
+        customerName: 'مشتری آزمایشی',
+        amount: 1,
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
 }
