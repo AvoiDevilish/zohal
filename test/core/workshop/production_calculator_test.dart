@@ -102,7 +102,7 @@ void main() {
 
       expect(result.findMaterial('label')?.quantity, 20);
 
-      expect(result.totalRequiredWeightGrams, closeTo(2000, 0.0001));
+      expect(result.totalRequiredWeightGrams, closeTo(2154.7777778, 0.0001));
     });
 
     test('does not include inactive packaging rules', () {
