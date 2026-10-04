@@ -6,6 +6,7 @@ class ProductionStockCheckItem {
   final double requiredQuantity;
   final double availableQuantity;
   final double shortageQuantity;
+  final String unit;
 
   const ProductionStockCheckItem({
     required this.materialId,
@@ -13,6 +14,7 @@ class ProductionStockCheckItem {
     required this.requiredQuantity,
     required this.availableQuantity,
     required this.shortageQuantity,
+    required this.unit,
   });
 
   bool get isSufficient => shortageQuantity <= 0;
@@ -61,6 +63,7 @@ class ProductionStockChecker {
         requiredQuantity: requirement.quantity,
         availableQuantity: available,
         shortageQuantity: shortage,
+        unit: requirement.unit,
       );
     }).toList();
 
