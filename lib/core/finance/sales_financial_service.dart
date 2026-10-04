@@ -181,8 +181,7 @@ class SalesFinancialService {
       return existing;
     }
 
-    final customerBalance = await store.getBalance('customer-' + customerId);
-    final availableCredit = customerBalance < 0 ? -customerBalance : 0;
+    final availableCredit = await getCustomerCredit(customerId);
     if (availableCredit <= 0) {
       throw StateError('این مشتری اعتبار قابل استفاده ندارد.');
     }
