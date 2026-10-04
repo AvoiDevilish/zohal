@@ -4,18 +4,21 @@ class SalesDeliveryLine {
     required this.quantity,
     required this.unitSellingPrice,
     required this.totalAmount,
+    this.productName,
   });
 
   final String productVariantId;
   final int quantity;
   final int unitSellingPrice;
   final int totalAmount;
+  final String? productName;
 
   Map<String, dynamic> toMap() => {
     'productVariantId': productVariantId,
     'quantity': quantity,
     'unitSellingPrice': unitSellingPrice,
     'totalAmount': totalAmount,
+    'productName': productName,
   };
 
   factory SalesDeliveryLine.fromMap(Map<String, dynamic> map) {
@@ -24,6 +27,7 @@ class SalesDeliveryLine {
       quantity: (map['quantity'] as num).toInt(),
       unitSellingPrice: (map['unitSellingPrice'] as num).toInt(),
       totalAmount: (map['totalAmount'] as num).toInt(),
+      productName: map['productName'] as String?,
     );
   }
 }
