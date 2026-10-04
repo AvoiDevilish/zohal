@@ -41,7 +41,6 @@ class CostConsumptionService {
     if (referenceId.trim().isEmpty) {
       throw ArgumentError('referenceId نمی‌تواند خالی باشد.');
     }
-
     if (quantity <= 0) {
       throw ArgumentError('مقدار مصرف باید بیشتر از صفر باشد.');
     }
@@ -52,9 +51,19 @@ class CostConsumptionService {
     );
 
     if (existing.isNotEmpty) {
+      final existingQuantity =
+          existing.fold(0.0, (sum, item) => sum + item.quantity);
+      if ((existingQuantity - quantity).abs() > 0.000001) {
+        throw StateError(
+          'مصرف "$referenceId" قبلاً با مقدار متفاوتی ثبت شده است.',
+        );
+      }
+      if (method != CostingMethod.weightedAverage) {
+        await _reconcileLayerBalances(existing);
+      }
       return CostConsumptionResult(
         referenceId: referenceId,
-        requestedQuantity: existing.fold(0, (sum, item) => sum + item.quantity),
+        requestedQuantity: existingQuantity,
         totalCost: existing.fold(0, (sum, item) => sum + item.totalCost),
         allocations: existing,
         alreadyConsumed: true,
@@ -62,7 +71,6 @@ class CostConsumptionService {
     }
 
     final layers = await costLayerStore.getLayers(materialId: materialId);
-
     if (layers.isEmpty) {
       throw StateError(
         'هیچ Cost Layer فعالی برای ماده "$materialId" وجود ندارد.',
@@ -79,7 +87,6 @@ class CostConsumptionService {
       final allocation = calculation.allocations.first;
       final layer = layers.first;
       final now = DateTime.now();
-
       final weightedAllocation = allocation_model.CostAllocation(
         id: 'cost-allocation-$referenceId-0',
         materialId: layer.materialId,
@@ -92,9 +99,7 @@ class CostConsumptionService {
         referenceId: referenceId,
         createdAt: now,
       );
-
       await allocationStore.add(weightedAllocation);
-
       return CostConsumptionResult(
         referenceId: referenceId,
         requestedQuantity: calculation.requestedQuantity,
@@ -108,24 +113,15 @@ class CostConsumptionService {
 
     for (var index = 0; index < calculation.allocations.length; index++) {
       final allocation = calculation.allocations[index];
-
       final layer = await costLayerStore.getById(allocation.layerId);
-
       if (layer == null) {
         throw StateError('Cost Layer "${allocation.layerId}" پیدا نشد.');
       }
 
       final remainingQuantity = layer.remainingQuantity - allocation.quantity;
-
       if (remainingQuantity < -0.000001) {
         throw StateError('موجودی Cost Layer "${layer.id}" کافی نیست.');
       }
-
-      await costLayerStore.update(
-        layer.copyWith(
-          remainingQuantity: remainingQuantity < 0 ? 0 : remainingQuantity,
-        ),
-      );
 
       allocations.add(
         allocation_model.CostAllocation(
@@ -143,9 +139,10 @@ class CostConsumptionService {
       );
     }
 
-    for (final allocation in allocations) {
-      await allocationStore.add(allocation);
-    }
+    // Allocations are the durable intent. Persist them first so an interrupted
+    // layer update can be repaired deterministically by a later retry.
+    await allocationStore.addAll(allocations);
+    await _reconcileLayerBalances(allocations);
 
     return CostConsumptionResult(
       referenceId: referenceId,
@@ -153,5 +150,43 @@ class CostConsumptionService {
       totalCost: calculation.totalCost,
       allocations: List.unmodifiable(allocations),
     );
+  }
+
+  Future<void> _reconcileLayerBalances(
+    List<allocation_model.CostAllocation> relevantAllocations,
+  ) async {
+    final layerIds = relevantAllocations
+        .map((allocation) => allocation.costLayerId)
+        .where((id) => id != 'weighted-average')
+        .toSet();
+    if (layerIds.isEmpty) return;
+
+    final updates = <CostLayer>[];
+    for (final layerId in layerIds) {
+      final layer = await costLayerStore.getById(layerId);
+      if (layer == null) {
+        throw StateError('Cost Layer "$layerId" پیدا نشد.');
+      }
+
+      final allAllocations =
+          await allocationStore.getAllocations(costLayerId: layerId);
+      final consumedQuantity =
+          allAllocations.fold(0.0, (sum, allocation) => sum + allocation.quantity);
+      final remainingQuantity = layer.quantity - consumedQuantity;
+
+      if (remainingQuantity < -0.000001) {
+        throw StateError(
+          'مجموع مصرف Cost Layer "${layer.id}" از مقدار اولیه آن بیشتر است.',
+        );
+      }
+
+      updates.add(
+        layer.copyWith(
+          remainingQuantity: remainingQuantity < 0 ? 0 : remainingQuantity,
+        ),
+      );
+    }
+
+    await costLayerStore.updateAll(updates);
   }
 }
