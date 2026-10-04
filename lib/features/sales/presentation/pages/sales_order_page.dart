@@ -8,6 +8,7 @@ import '../../../../core/sales/product_variant_store.dart';
 import '../../../../core/sales/sales_order.dart';
 import '../../../../core/sales/sales_order_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
+import '../../../people/presentation/pages/people_page.dart';
 
 class SalesOrderPage extends StatefulWidget {
   const SalesOrderPage({super.key});
@@ -47,82 +48,33 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
     });
   }
 
-  Future<void> addCustomer() async {
-    final customer = await showDialog<Customer>(
-      context: context,
-      builder: (_) => const _CustomerDialog(),
-    );
-    if (customer == null || !mounted) return;
-    await _customers.upsert(customer);
+  Future<void> openPeople() async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => const PeoplePage(),
+    ));
     await load();
   }
 
   Future<void> addOrder() async {
     if (customers.isEmpty) {
-      await addCustomer();
+      await openPeople();
       if (customers.isEmpty) return;
     }
-
-    final order = await showDialog<SalesOrder>(
-      context: context,
-      builder: (_) => _NewOrderDialog(
-        products: products,
-        customers: customers,
+    final order = await Navigator.of(context).push<SalesOrder>(
+      MaterialPageRoute<SalesOrder>(
+        builder: (_) => _NewOrderPage(
+          products: products,
+          customers: customers,
+        ),
       ),
     );
     if (order == null || !mounted) return;
-
     await _orders.create(order);
     await load();
-
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('سفارش ثبت شد و به کارگاه ارجاع شد.')),
+      const SnackBar(content: Text('سفارش ثبت شد و در صف کارگاه قرار گرفت.')),
     );
-  }
-
-  Future<void> editPrice(ProductVariant product) async {
-    final controller = TextEditingController(
-      text: product.currentSellingPrice.toString(),
-    );
-
-    final price = await showDialog<int>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('ویرایش قیمت ' + product.displayName),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'قیمت فروش جاری',
-            suffixText: 'تومان',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('انصراف'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = int.tryParse(
-                controller.text.trim().replaceAll(',', ''),
-              );
-              if (value == null || value <= 0) return;
-              Navigator.pop(dialogContext, value);
-            },
-            child: const Text('ذخیره'),
-          ),
-        ],
-      ),
-    );
-
-    controller.dispose();
-    if (price == null || !mounted) return;
-
-    await _products.upsert(product.copyWith(currentSellingPrice: price));
-    await load();
   }
 
   String money(int value) {
@@ -146,16 +98,7 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('صندوق'),
-        actions: [
-          IconButton(
-            onPressed: addCustomer,
-            tooltip: 'افزودن مشتری',
-            icon: const Icon(Icons.person_add_outlined),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('ثبت سفارش')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: addOrder,
         icon: const Icon(Icons.add_shopping_cart),
@@ -166,81 +109,39 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
         child: loading
             ? const Center(child: CircularProgressIndicator())
             : ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.md,
-                  AppSpacing.md,
-                  100,
-                ),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 100),
                 children: [
                   const Text(
-                    'قیمت فروش جاری',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  ...products.map(
-                    (product) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: ZohalCard(
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
-                            child: Icon(Icons.sell_outlined),
-                          ),
-                          title: Text(
-                            product.displayName,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          subtitle: Text(money(product.currentSellingPrice)),
-                          trailing: IconButton(
-                            onPressed: () => editPrice(product),
-                            icon: const Icon(Icons.edit_outlined),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  const Text(
-                    'سفارش‌های فروش',
+                    'سفارش‌های ثبت‌شده',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   if (orders.isEmpty)
                     const ZohalCard(child: Text('هنوز سفارشی ثبت نشده است.')),
-                  ...orders.map(
-                    (order) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: ZohalCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'سفارش ' + order.id,
-                              style: const TextStyle(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 6),
-                            Text('مشتری: ' + order.customerName),
-                            Text(
-                              'اقلام: ' +
-                                  order.lines.length.toString() +
-                                  ' ردیف',
-                            ),
-                            Text('تاریخ: ' + date(order.orderDate)),
-                            Text('مبلغ: ' + money(order.totalAmount)),
-                            const SizedBox(height: 6),
-                            Chip(label: Text(order.status.title)),
-                          ],
-                        ),
+                  ...orders.map((order) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: ZohalCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('سفارش ' + order.id, style: const TextStyle(fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 6),
+                          Text('مشتری: ' + order.customerName),
+                          Text('اقلام: ' + order.lines.length.toString() + ' ردیف'),
+                          Text('تاریخ: ' + date(order.orderDate)),
+                          Text('مبلغ: ' + money(order.totalAmount)),
+                          const SizedBox(height: 6),
+                          Chip(label: Text(order.status.title)),
+                        ],
                       ),
                     ),
-                  ),
+                  )),
                 ],
               ),
       ),
     );
   }
-}
+
 
 class _CustomerDialog extends StatefulWidget {
   const _CustomerDialog();
@@ -324,176 +225,194 @@ class _NewOrderDialog extends StatefulWidget {
   State<_NewOrderDialog> createState() => _NewOrderDialogState();
 }
 
-class _NewOrderDialogState extends State<_NewOrderDialog> {
-  final key = GlobalKey<FormState>();
+class _NewOrderPage extends StatefulWidget {
+  const _NewOrderPage({required this.products, required this.customers});
+  final List<ProductVariant> products;
+  final List<Customer> customers;
+  @override State<_NewOrderPage> createState() => _NewOrderPageState();
+}
+
+class _NewOrderPageState extends State<_NewOrderPage> {
   late String customerId;
-  late String productId;
-  int quantity = 1;
-  DateTime orderDate = DateTime.now();
-
-  ProductVariant get product =>
-      widget.products.firstWhere((item) => item.id == productId);
-
-  Customer get customer =>
-      widget.customers.firstWhere((item) => item.id == customerId);
-
-  int get total => product.currentSellingPrice * quantity;
+  final List<_DraftLine> lines = [];
 
   @override
   void initState() {
     super.initState();
     customerId = widget.customers.first.id;
-    productId = widget.products.first.id;
+    _addLine();
   }
 
-  Future<void> pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: orderDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null && mounted) setState(() => orderDate = picked);
+  @override
+  void dispose() {
+    for (final line in lines) {
+      line.quantityController.dispose();
+    }
+    super.dispose();
   }
+
+  void _addLine() {
+    final available = widget.products.where(
+      (p) => !lines.any((line) => line.productId == p.id),
+    );
+    if (available.isEmpty) return;
+    setState(() => lines.add(_DraftLine(
+      productId: available.first.id,
+      quantityController: TextEditingController(text: '1'),
+    )));
+  }
+
+  void _removeLine(int index) {
+    final line = lines.removeAt(index);
+    line.quantityController.dispose();
+    setState(() {});
+  }
+
+  ProductVariant productFor(_DraftLine line) =>
+      widget.products.firstWhere((item) => item.id == line.productId);
+
+  int get total => lines.fold(0, (sum, line) {
+    final q = int.tryParse(line.quantityController.text) ?? 0;
+    return sum + productFor(line).currentSellingPrice * q;
+  });
 
   void save() {
-    if (!key.currentState!.validate()) return;
-
-    final line = SalesOrderLine(
-      productVariantId: product.id,
-      productName: product.productName,
-      flavor: product.flavor,
-      packageLabel: product.packageLabel,
-      quantity: quantity,
-      unitSellingPrice: product.currentSellingPrice,
-      lineTotal: total,
-    );
-
-    Navigator.pop(
-      context,
-      SalesOrder(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        customerId: customer.id,
-        customerName: customer.name,
-        orderDate: orderDate,
-        lines: [line],
-        totalAmount: total,
-      ),
-    );
+    final draftLines = <SalesOrderLine>[];
+    for (final line in lines) {
+      final q = int.tryParse(line.quantityController.text.trim());
+      if (q == null || q <= 0) return;
+      final p = productFor(line);
+      draftLines.add(SalesOrderLine(
+        productVariantId: p.id,
+        productName: p.productName,
+        flavor: p.flavor,
+        packageLabel: p.packageLabel,
+        quantity: q,
+        unitSellingPrice: p.currentSellingPrice,
+        lineTotal: p.currentSellingPrice * q,
+      ));
+    }
+    if (draftLines.isEmpty) return;
+    final customer = widget.customers.firstWhere((item) => item.id == customerId);
+    Navigator.of(context).pop(SalesOrder(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      customerId: customer.id,
+      customerName: customer.name,
+      orderDate: DateTime.now(),
+      lines: List.unmodifiable(draftLines),
+      totalAmount: total,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('ثبت سفارش مشتری'),
-      content: Form(
-        key: key,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    final canAddMore = lines.length < widget.products.length;
+    return Scaffold(
+      appBar: AppBar(title: const Text('سفارش جدید')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: save,
+        icon: const Icon(Icons.send),
+        label: const Text('ثبت و ارجاع به کارگاه'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 100),
+        children: [
+          DropdownButtonFormField<String>(
+            initialValue: customerId,
+            decoration: const InputDecoration(labelText: 'مشتری'),
+            items: widget.customers.map((item) => DropdownMenuItem(
+              value: item.id, child: Text(item.name),
+            )).toList(),
+            onChanged: (value) {
+              if (value != null) setState(() => customerId = value);
+            },
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
             children: [
-              DropdownButtonFormField<String>(
-                initialValue: customerId,
-                decoration: const InputDecoration(labelText: 'مشتری'),
-                items: widget.customers
-                    .map(
-                      (item) => DropdownMenuItem(
-                        value: item.id,
-                        child: Text(item.name),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) setState(() => customerId = value);
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              DropdownButtonFormField<String>(
-                initialValue: productId,
-                decoration: const InputDecoration(labelText: 'نوع محصول'),
-                items: widget.products
-                    .map(
-                      (item) => DropdownMenuItem(
-                        value: item.id,
-                        child: Text(item.displayName),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) setState(() => productId = value);
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextFormField(
-                initialValue: '1',
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'تعداد'),
-                validator: (value) {
-                  final number = int.tryParse(value?.trim() ?? '');
-                  return number == null || number <= 0
-                      ? 'تعداد معتبر وارد کنید'
-                      : null;
-                },
-                onChanged: (value) {
-                  final number = int.tryParse(value.trim());
-                  if (number != null && number > 0) {
-                    setState(() => quantity = number);
-                  }
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('تاریخ سفارش'),
-                subtitle: Text(
-                  orderDate.year.toString() +
-                      '/' +
-                      orderDate.month.toString().padLeft(2, '0') +
-                      '/' +
-                      orderDate.day.toString().padLeft(2, '0'),
-                ),
-                trailing: TextButton(
-                  onPressed: pickDate,
-                  child: const Text('انتخاب'),
-                ),
-              ),
-              const Divider(),
-              Row(
-                children: [
-                  const Expanded(child: Text('قیمت واحد')),
-                  Text(product.currentSellingPrice.toString() + ' تومان'),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'مبلغ سفارش',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  Text(
-                    total.toString() + ' تومان',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ],
+              const Expanded(child: Text('اقلام سفارش', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
+              OutlinedButton.icon(
+                onPressed: canAddMore ? _addLine : null,
+                icon: const Icon(Icons.add),
+                label: const Text('افزودن محصول'),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+          ...List.generate(lines.length, (index) {
+            final line = lines[index];
+            final p = productFor(line);
+            final selectedIds = lines.map((item) => item.productId).toSet();
+            final options = widget.products.where(
+              (item) => item.id == line.productId || !selectedIds.contains(item.id),
+            );
+            final q = int.tryParse(line.quantityController.text) ?? 0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: ZohalCard(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: line.productId,
+                            decoration: const InputDecoration(labelText: 'محصول'),
+                            items: options.map((item) => DropdownMenuItem(
+                              value: item.id, child: Text(item.displayName),
+                            )).toList(),
+                            onChanged: (value) {
+                              if (value != null) setState(() => line.productId = value);
+                            },
+                          ),
+                        ),
+                        if (lines.length > 1)
+                          IconButton(
+                            onPressed: () => _removeLine(index),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextField(
+                      controller: line.quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'تعداد'),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        const Expanded(child: Text('قیمت واحد')),
+                        Text(p.currentSellingPrice.toString() + ' تومان'),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        const Expanded(child: Text('مبلغ ردیف')),
+                        Text((p.currentSellingPrice * q).toString() + ' تومان'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          const Divider(),
+          Row(
+            children: [
+              const Expanded(child: Text('مبلغ کل سفارش', style: TextStyle(fontWeight: FontWeight.w800))),
+              Text(total.toString() + ' تومان', style: const TextStyle(fontWeight: FontWeight.w900)),
+            ],
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('انصراف'),
-        ),
-        FilledButton.icon(
-          onPressed: save,
-          icon: const Icon(Icons.send),
-          label: const Text('ثبت و ارجاع به کارگاه'),
-        ),
-      ],
     );
   }
+}
+
+class _DraftLine {
+  _DraftLine({required this.productId, required this.quantityController});
+  String productId;
+  final TextEditingController quantityController;
 }
