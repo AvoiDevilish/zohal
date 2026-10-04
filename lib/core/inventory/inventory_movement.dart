@@ -74,10 +74,10 @@ extension InventoryMovementTypeExtension on InventoryMovementType {
   }
 
   static InventoryMovementType fromKey(String? key) {
-    return InventoryMovementType.values.firstWhere(
-      (type) => type.key == key,
-      orElse: () => InventoryMovementType.adjustmentIncrease,
-    );
+    for (final type in InventoryMovementType.values) {
+      if (type.key == key) return type;
+    }
+    throw StateError('نوع حرکت انبار ناشناخته است: $key');
   }
 }
 
