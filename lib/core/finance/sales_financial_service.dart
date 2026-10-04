@@ -62,11 +62,19 @@ class SalesFinancialService {
   }) async {
     if (amount <= 0) throw ArgumentError('مبلغ دریافت باید بیشتر از صفر باشد.');
 
+    final customerAccountId = 'customer-' + customerId;
+    final outstanding = await store.getBalance(customerAccountId);
+    if (outstanding <= 0) {
+      throw StateError('این مشتری بدهی قابل تسویه ندارد.');
+    }
+    if (amount > outstanding) {
+      throw StateError('مبلغ دریافت نمی‌تواند بیشتر از بدهی مشتری باشد.');
+    }
+
     final transactionId = 'receipt-' + receiptId;
     final existing = await store.getTransaction(transactionId);
     if (existing != null) return existing;
 
-    final customerAccountId = 'customer-' + customerId;
     await store.ensureAccount(FinancialAccount(
       id: customerAccountId,
       name: customerName,
