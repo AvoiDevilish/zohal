@@ -48,108 +48,46 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
   }
 
   Future<void> _editPerson() async {
-    final nameController = TextEditingController(text: _name);
-    final phoneController = TextEditingController(text: _phone ?? '');
-    final notesController = TextEditingController(text: _notes ?? '');
-    final formKey = GlobalKey<FormState>();
-
     final result = await showDialog<_PersonEditResult>(
       context: context,
-      builder: (dialogContext) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: Text(widget.type == PersonType.customer ? 'ویرایش مشتری' : 'ویرایش تأمین‌کننده'),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameController,
-                    textAlign: TextAlign.right,
-                    autofocus: true,
-                    decoration: const InputDecoration(labelText: 'نام'),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'نام را وارد کنید'
-                        : null,
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: phoneController,
-                    textAlign: TextAlign.right,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'تلفن'),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: notesController,
-                    textAlign: TextAlign.right,
-                    decoration: const InputDecoration(labelText: 'یادداشت'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('انصراف'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (!formKey.currentState!.validate()) return;
-                Navigator.pop(
-                  dialogContext,
-                  _PersonEditResult(
-                    name: nameController.text.trim(),
-                    phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
-                    notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
-                  ),
-                );
-              },
-              child: const Text('ذخیره'),
-            ),
-          ],
-        ),
+      builder: (_) => _PersonEditDialog(
+        title: widget.type == PersonType.customer
+            ? 'ویرایش مشتری'
+            : 'ویرایش تأمین‌کننده',
+        name: _name,
+        phone: _phone,
+        notes: _notes,
       ),
     );
-    nameController.dispose();
-    phoneController.dispose();
-    notesController.dispose();
 
     if (result == null || !mounted) return;
 
     if (widget.type == PersonType.customer) {
       final currentRows = await CustomerStore.instance.getAll();
       final matching = currentRows.where((item) => item.id == widget.personId);
-      if (matching.isNotEmpty) {
-        final existing = matching.first;
-        await CustomerStore.instance.upsert(
-          Customer(
-            id: existing.id,
-            name: result.name,
-            phone: result.phone,
-            notes: result.notes,
-            isActive: existing.isActive,
-          ),
-        );
-      }
+      final existing = matching.isEmpty ? null : matching.first;
+      await CustomerStore.instance.upsert(
+        Customer(
+          id: widget.personId,
+          name: result.name,
+          phone: result.phone,
+          notes: result.notes,
+          isActive: existing?.isActive ?? true,
+        ),
+      );
     } else {
       final currentRows = await SupplierStore.instance.getAll();
       final matching = currentRows.where((item) => item.id == widget.personId);
-      if (matching.isNotEmpty) {
-        final existing = matching.first;
-        await SupplierStore.instance.upsert(
-          Supplier(
-            id: existing.id,
-            name: result.name,
-            phone: result.phone,
-            notes: result.notes,
-            isActive: existing.isActive,
-          ),
-        );
-      }
+      final existing = matching.isEmpty ? null : matching.first;
+      await SupplierStore.instance.upsert(
+        Supplier(
+          id: widget.personId,
+          name: result.name,
+          phone: result.phone,
+          notes: result.notes,
+          isActive: existing?.isActive ?? true,
+        ),
+      );
     }
 
     if (!mounted) return;
@@ -310,6 +248,115 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
                 ],
               ),
       ),
+      ),
+    );
+  }
+}
+
+class _PersonEditDialog extends StatefulWidget {
+  const _PersonEditDialog({
+    required this.title,
+    required this.name,
+    this.phone,
+    this.notes,
+  });
+
+  final String title;
+  final String name;
+  final String? phone;
+  final String? notes;
+
+  @override
+  State<_PersonEditDialog> createState() => _PersonEditDialogState();
+}
+
+class _PersonEditDialogState extends State<_PersonEditDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _notesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.name);
+    _phoneController = TextEditingController(text: widget.phone ?? '');
+    _notesController = TextEditingController(text: widget.notes ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(
+      context,
+      _PersonEditResult(
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        title: Text(widget.title),
+        content: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  textAlign: TextAlign.right,
+                  autofocus: true,
+                  decoration: const InputDecoration(labelText: 'نام'),
+                  validator: (value) =>
+                      value == null || value.trim().isEmpty
+                          ? 'نام را وارد کنید'
+                          : null,
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _phoneController,
+                  textAlign: TextAlign.right,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'تلفن'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _notesController,
+                  textAlign: TextAlign.right,
+                  decoration: const InputDecoration(labelText: 'یادداشت'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('انصراف'),
+          ),
+          FilledButton(
+            onPressed: _save,
+            child: const Text('ذخیره'),
+          ),
+        ],
       ),
     );
   }
