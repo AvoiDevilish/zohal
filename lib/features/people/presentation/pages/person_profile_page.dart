@@ -121,13 +121,19 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
     if (result == null || !mounted) return;
 
     if (widget.type == PersonType.customer) {
-      final current = Customer(
-        id: widget.personId,
-        name: result.name,
-        phone: result.phone,
-        notes: result.notes,
-      );
-      await CustomerStore.instance.upsert(current);
+      final currentRows = await CustomerStore.instance.getAll();
+      final existing = currentRows.where((item) => item.id == widget.personId).firstOrNull;
+      if (existing != null) {
+        await CustomerStore.instance.upsert(
+          Customer(
+            id: existing.id,
+            name: result.name,
+            phone: result.phone,
+            notes: result.notes,
+            isActive: existing.isActive,
+          ),
+        );
+      }
     } else {
       final currentRows = await SupplierStore.instance.getAll();
       final existing = currentRows.where((item) => item.id == widget.personId).firstOrNull;
@@ -302,7 +308,7 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
                 ],
               ),
       ),
-      );
+      ),
     );
   }
 }
