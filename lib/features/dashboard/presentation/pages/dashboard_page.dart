@@ -4,6 +4,7 @@ import '../../../../core/design/app_colors.dart';
 import '../../../../core/sales/customer_store.dart';
 import '../../../../core/sales/supplier_store.dart';
 import '../../../../core/sales/sales_order_store.dart';
+import '../../../../core/sales/sales_order.dart';
 import '../../../../core/sales/product_variant_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
 import '../../../people/presentation/pages/people_page.dart';
