@@ -64,7 +64,7 @@ void main() {
   });
 
   testWidgets('shows empty production state', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: WorkshopDashboardScreen()));
+    await tester.pumpWidget(MaterialApp(home: WorkshopDashboardScreen()));
     await tester.pumpAndSettle();
 
     expect(find.text('هنوز تولیدی ثبت نشده است.'), findsOneWidget);
