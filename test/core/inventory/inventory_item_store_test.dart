@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zohal_android_test/core/inventory/inventory_item.dart';
 import 'package:zohal_android_test/core/inventory/inventory_item_catalog.dart';
 import 'package:zohal_android_test/core/inventory/inventory_item_store.dart';
 
@@ -12,32 +13,18 @@ void main() {
 
     test('seeds the requested initial food and packaging items', () async {
       final store = InventoryItemStore.instance;
-
       await store.ensureSeeded();
       final items = await store.getItems();
 
       expect(items.length, initialInventoryItems.length);
-      expect(
-        items.where((item) => item.isFood).length,
-        12,
-      );
-      expect(
-        items.where((item) => !item.isFood).length,
-        7,
-      );
-      expect(
-        items.any((item) => item.name == 'خرما کبکاب'),
-        isTrue,
-      );
-      expect(
-        items.any((item) => item.name == 'ظرف یک کیلویی'),
-        isTrue,
-      );
+      expect(items.where((item) => item.isFood).length, 12);
+      expect(items.where((item) => !item.isFood).length, 7);
+      expect(items.any((item) => item.name == 'خرما کبکاب'), isTrue);
+      expect(items.any((item) => item.name == 'ظرف یک کیلویی'), isTrue);
     });
 
     test('stores food nutrition per 100 grams and kg conversion', () async {
       final store = InventoryItemStore.instance;
-
       await store.ensureSeeded();
       final almond = await store.getById('raw_almond');
 
@@ -52,7 +39,6 @@ void main() {
 
     test('packaging items use piece as the base unit and have no nutrition', () async {
       final store = InventoryItemStore.instance;
-
       await store.ensureSeeded();
       final container = await store.getById('pack_container_100g');
 
@@ -64,25 +50,29 @@ void main() {
 
     test('seeding does not overwrite an existing custom catalog', () async {
       final store = InventoryItemStore.instance;
+      final original = initialInventoryItems.first;
 
       await store.upsert(
-        initialInventoryItems.first.copyWithForTestName('خرمای سفارشی'),
+        InventoryItem(
+          id: original.id,
+          name: 'custom date',
+          type: original.type,
+          unit: original.unit,
+          minimumStock: original.minimumStock,
+          category: original.category,
+          englishName: original.englishName,
+          isFood: original.isFood,
+          unitConversions: original.unitConversions,
+          nutrition: original.nutrition,
+          notes: original.notes,
+        ),
       );
 
       await store.ensureSeeded();
 
       final items = await store.getItems();
       expect(items.length, 1);
-      expect(items.single.name, 'خرمای سفارشی');
+      expect(items.single.name, 'custom date');
     });
   });
-}
-
-extension on dynamic {
-  dynamic copyWithForTestName(String name) {
-    final item = this;
-    return item.runtimeType == Object
-        ? item
-        : item;
-  }
 }
