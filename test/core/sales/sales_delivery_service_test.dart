@@ -7,6 +7,8 @@ import 'package:zohal_android_test/core/sales/sales_delivery_service.dart';
 import 'package:zohal_android_test/core/sales/sales_delivery_store.dart';
 import 'package:zohal_android_test/core/sales/sales_order.dart';
 import 'package:zohal_android_test/core/sales/sales_order_store.dart';
+import 'package:zohal_android_test/core/finance/financial_store.dart';
+import 'package:zohal_android_test/core/finance/sales_financial_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -14,12 +16,14 @@ void main() {
   final inventoryStore = InventoryStore.instance;
   final orderStore = SalesOrderStore.instance;
   final deliveryStore = SalesDeliveryStore.instance;
+  final financialStore = FinancialStore.instance;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     await inventoryStore.clear();
     await orderStore.clear();
     await deliveryStore.clear();
+    await financialStore.clear();
   });
 
   SalesOrder order({SalesOrderStatus status = SalesOrderStatus.productionCompleted}) {
@@ -63,6 +67,7 @@ void main() {
     inventoryStore: inventoryStore,
     orderStore: orderStore,
     deliveryStore: deliveryStore,
+    financialService: SalesFinancialService(store: financialStore),
   );
 
   test('moves completed production to ready for delivery', () async {
