@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/design/app_colors.dart';
-import '../../../../core/design/app_spacing.dart';
 import '../../../../core/sales/customer_store.dart';
 import '../../../../core/sales/supplier_store.dart';
 import '../../../../core/sales/sales_order_store.dart';
@@ -80,7 +79,7 @@ class _DashboardPageState extends State<DashboardPage> {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _MetricRow(label: 'تعداد فروش', value: '—'),
+                _MetricRow(label: 'تعداد فروش', value: orderCount.toString()),
                 _MetricRow(label: 'مجموع فروش', value: '— تومان'),
                 _MetricRow(label: 'سود امروز', value: '— تومان'),
               ],
