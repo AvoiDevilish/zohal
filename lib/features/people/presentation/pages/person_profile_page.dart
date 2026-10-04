@@ -122,8 +122,9 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
 
     if (widget.type == PersonType.customer) {
       final currentRows = await CustomerStore.instance.getAll();
-      final existing = currentRows.where((item) => item.id == widget.personId).firstOrNull;
-      if (existing != null) {
+      final matching = currentRows.where((item) => item.id == widget.personId);
+      if (matching.isNotEmpty) {
+        final existing = matching.first;
         await CustomerStore.instance.upsert(
           Customer(
             id: existing.id,
@@ -136,8 +137,9 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
       }
     } else {
       final currentRows = await SupplierStore.instance.getAll();
-      final existing = currentRows.where((item) => item.id == widget.personId).firstOrNull;
-      if (existing != null) {
+      final matching = currentRows.where((item) => item.id == widget.personId);
+      if (matching.isNotEmpty) {
+        final existing = matching.first;
         await SupplierStore.instance.upsert(
           Supplier(
             id: existing.id,
