@@ -109,6 +109,7 @@ void main() {
   test('consumes reserved materials and creates product plus pit output', () async {
     await seedStock();
     final currentOrder = order();
+    await orderStore.create(currentOrder);
     final analysisResult = await analysis();
 
     await service().reserve(currentOrder, analysisResult);
