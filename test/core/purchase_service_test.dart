@@ -6,6 +6,7 @@ import 'package:zohal_android_test/core/inventory/inventory_store.dart';
 import 'package:zohal_android_test/core/purchase.dart';
 import 'package:zohal_android_test/core/purchase_service.dart';
 import 'package:zohal_android_test/core/purchase_store.dart';
+import 'package:zohal_android_test/core/purchase_return_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -13,12 +14,14 @@ void main() {
   final inventory = InventoryStore.instance;
   final purchases = PurchaseStore.instance;
   final finance = FinancialStore.instance;
+  final purchaseReturns = PurchaseReturnStore.instance;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     await inventory.clear();
     await purchases.clear();
     await finance.clear();
+    await purchaseReturns.clear();
   });
 
   Purchase purchase() => Purchase(
@@ -43,6 +46,7 @@ void main() {
     inventoryStore: inventory,
     purchaseStore: purchases,
     financialStore: finance,
+    purchaseReturnStore: purchaseReturns,
   );
 
   test('purchase increases stock and creates supplier payable', () async {
@@ -61,6 +65,39 @@ void main() {
     expect(await inventory.getStock('raw_date_khesht'), 10);
     expect((await finance.getTransactions()).length, 1);
     expect((await purchases.getAll()).length, 1);
+  });
+
+  test('purchase return reverses stock and supplier payable', () async {
+    await service().recordPurchase(purchase());
+
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-purchase-1',
+      quantities: {'raw_date_khesht': 2},
+    );
+
+    expect(await inventory.getStock('raw_date_khesht'), 8);
+    expect(await finance.getBalance('supplier-supplier-1'), -4000000);
+    expect(await finance.getBalance('inventory-asset'), 4000000);
+  });
+
+  test('same purchase return id is idempotent', () async {
+    await service().recordPurchase(purchase());
+
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-purchase-1',
+      quantities: {'raw_date_khesht': 2},
+    );
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-purchase-1',
+      quantities: {'raw_date_khesht': 5},
+    );
+
+    expect(await inventory.getStock('raw_date_khesht'), 8);
+    expect((await purchaseReturns.getAll()).length, 1);
+    expect((await finance.getTransactions()).length, 2);
   });
 
   test('supplier payment reduces payable and increases cash', () async {
