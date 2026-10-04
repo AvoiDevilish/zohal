@@ -32,6 +32,7 @@ class SalesReturnService {
   Future<SalesReturnResult> returnItems({
     required SalesDelivery delivery,
     required String returnId,
+    required String customerName,
     required Map<String, int> quantities,
     String? note,
   }) async {
@@ -94,7 +95,7 @@ class SalesReturnService {
       return InventoryMovement(
         id: 'sale-return-' + returnId + '-' + entry.key,
         itemId: entry.key,
-        itemName: entry.key,
+        itemName: line.productName ?? entry.key,
         itemType: 'finishedProduct',
         quantity: entry.value.toDouble(),
         unit: 'عدد',
@@ -127,6 +128,7 @@ class SalesReturnService {
       deliveryId: delivery.id,
       orderId: delivery.orderId,
       customerId: delivery.customerId,
+      customerName: customerName,
       createdAt: now,
       lines: requested.entries.map((entry) {
         final line = deliveryLines[entry.key]!;
@@ -144,7 +146,7 @@ class SalesReturnService {
     await returnStore.add(salesReturn);
     await financialService.postSaleReturn(
       salesReturn,
-      customerName: 'مشتری ' + delivery.customerId,
+      customerName: customerName,
     );
 
     return SalesReturnResult(salesReturn: salesReturn, changed: true);
