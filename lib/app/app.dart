@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../core/design/app_theme.dart';
 import '../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../features/inventory/presentation/pages/inventory_page.dart';
-import '../features/sales/presentation/pages/sales_order_page.dart';
 import '../features/workshop/presentation/screens/workshop_dashboard_screen.dart';
 
 class ZohalApp extends StatelessWidget {
@@ -33,7 +32,11 @@ class _ZohalHomePageState extends State<ZohalHomePage> {
 
   final List<Widget> _pages = [
     InventoryPage(),
-    SalesOrderPage(),
+    _PlaceholderTab(
+      title: 'صندوق',
+      icon: Icons.account_balance_wallet_outlined,
+      message: 'بخش صندوق در حال اتصال به هسته مالی زحل است.',
+    ),
     DashboardPage(),
     WorkshopDashboardScreen(),
     _PlaceholderTab(
