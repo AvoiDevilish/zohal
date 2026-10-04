@@ -403,7 +403,22 @@ class PurchaseService {
 
     final transactionId = 'supplier-credit-settlement-' + settlementId;
     final existing = await financialStore.getTransaction(transactionId);
-    if (existing != null) return existing;
+    if (existing != null) {
+      final settlementStore = SupplierCreditSettlementStore.instance;
+      final existingSettlement = await settlementStore.getById(settlementId);
+      if (existingSettlement == null) {
+        await settlementStore.add(
+          SupplierCreditSettlement(
+            id: settlementId,
+            supplierId: supplierId,
+            amount: amount,
+            createdAt: existing.createdAt,
+            note: note,
+          ),
+        );
+      }
+      return existing;
+    }
 
     final availableCredit = await getSupplierCredit(supplierId);
     if (availableCredit <= 0) {
