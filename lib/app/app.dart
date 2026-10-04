@@ -32,7 +32,7 @@ class ZohalHomePage extends StatefulWidget {
 class _ZohalHomePageState extends State<ZohalHomePage> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
+  final List<Widget> _pages = [
     DashboardPage(),
     Center(child: Text('فروش')),
     InventoryPage(),
