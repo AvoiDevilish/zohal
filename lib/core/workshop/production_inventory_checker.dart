@@ -47,6 +47,7 @@ class ProductionInventoryChecker {
           requiredQuantity: requirement.quantity,
           availableQuantity: available,
           shortageQuantity: shortage,
+          unit: requirement.unit,
         ),
       );
     }
