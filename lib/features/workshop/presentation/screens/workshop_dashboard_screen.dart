@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:zohal_android_test/core/costing/production_cost_store.dart';
 import 'package:zohal_android_test/core/workshop/production_batch.dart';
 import 'package:zohal_android_test/core/workshop/production_batch_store.dart';
+import 'package:zohal_android_test/core/inventory/inventory_store.dart';
+import 'package:zohal_android_test/core/workshop/production_order_analyzer.dart';
 import 'package:zohal_android_test/core/sales/sales_order.dart';
 import 'package:zohal_android_test/core/sales/sales_order_store.dart';
 
@@ -62,6 +64,89 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
     );
   }
 
+  Future<void> _analyzeOrder(SalesOrder order) async {
+    try {
+      final analysis = await ProductionOrderAnalyzer(
+        inventoryStore: InventoryStore.instance,
+      ).analyze(order);
+
+      await _orderStore.update(SalesOrder(
+        id: order.id,
+        customerId: order.customerId,
+        customerName: order.customerName,
+        orderDate: order.orderDate,
+        lines: order.lines,
+        totalAmount: order.totalAmount,
+        status: analysis.canProduce
+            ? SalesOrderStatus.readyForProduction
+            : SalesOrderStatus.shortage,
+      ));
+
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(
+            analysis.canProduce
+                ? 'تحلیل کارگاه: آماده تولید'
+                : 'تحلیل کارگاه: کمبود موجودی',
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ...analysis.stockCheck.items.map(
+                  (item) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(item.materialName),
+                    subtitle: Text(
+                      'نیاز: ${item.requiredQuantity.toStringAsFixed(2)} ${item.unit} '
+                      '• موجود: ${item.availableQuantity.toStringAsFixed(2)} ${item.unit}',
+                    ),
+                    trailing: item.isSufficient
+                        ? const Icon(Icons.check_circle_outline)
+                        : Text(
+                            'کمبود ${item.shortageQuantity.toStringAsFixed(2)}',
+                          ),
+                  ),
+                ),
+                if (analysis.byproducts.isNotEmpty) ...[
+                  const Divider(),
+                  const Text(
+                    'محصولات جانبی قابل استفاده',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  ...analysis.byproducts.map(
+                    (item) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(item.itemName),
+                      trailing: Text(
+                        '${item.quantity.toStringAsFixed(2)} ${item.unit}',
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('تأیید'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تحلیل سفارش انجام نشد: $error')),
+      );
+    }
+  }
+
   void _refresh() {
     if (mounted) setState(() {});
   }
@@ -104,19 +189,7 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
                 _IncomingOrders(
                   orders: data.incomingOrders,
                   onAnalyze: (order) async {
-                    await _orderStore.update(SalesOrder(
-                      id: order.id,
-                      customerId: order.customerId,
-                      customerName: order.customerName,
-                      orderDate: order.orderDate,
-                      lines: order.lines,
-                      totalAmount: order.totalAmount,
-                      status: SalesOrderStatus.workshopAnalyzing,
-                    ));
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('سفارش وارد مرحله تحلیل کارگاه شد.')),
-                    );
+                    await _analyzeOrder(order);
                   },
                 ),
                 const SizedBox(height: 16),
