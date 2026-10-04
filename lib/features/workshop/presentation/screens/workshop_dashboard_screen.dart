@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/costing/production_cost_store.dart';
-import '../../../core/workshop/production_batch.dart';
-import '../../../core/workshop/production_batch_store.dart';
+import 'package:zohal_android_test/core/costing/production_cost_store.dart';
+import 'package:zohal_android_test/core/workshop/production_batch.dart';
+import 'package:zohal_android_test/core/workshop/production_batch_store.dart';
 
 class WorkshopDashboardScreen extends StatefulWidget {
   final ProductionBatchStore batchStore;
