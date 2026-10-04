@@ -14,8 +14,6 @@ class ProductionWorkflowResult {
     required this.execution,
     required this.cost,
   });
-
-  Future<ProductionWorkflowResult> _executeInternal() async => this;
 }
 
 class ProductionWorkflowService {
