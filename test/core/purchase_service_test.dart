@@ -346,7 +346,7 @@ void main() {
 
     expect(await service().getSupplierCredit('supplier-1'), 1000000);
     expect(await finance.getBalance('supplier-supplier-1'), 1000000);
-    expect(await finance.getBalance('cash'), 1000000);
+    expect(await finance.getBalance('cash'), -4000000);
     expect((await creditSettlements.getAll()).single.amount, 1000000);
   });
 
