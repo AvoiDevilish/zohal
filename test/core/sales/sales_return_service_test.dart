@@ -124,6 +124,40 @@ void main() {
     expect((await financialStore.getTransactions()).length, 2);
   });
 
+  test('retries an existing return and repairs missing financial posting', () async {
+    await seedDeliveryAndSale();
+
+    final salesReturn = SalesReturn(
+      id: 'return-recovery',
+      deliveryId: delivery().id,
+      orderId: delivery().orderId,
+      customerId: delivery().customerId,
+      customerName: 'مشتری آزمایشی',
+      createdAt: DateTime(2026, 10, 5),
+      lines: const [
+        SalesReturnLine(
+          productVariantId: 'energy-bar-100g-ginger',
+          quantity: 2,
+          unitSellingPrice: 100000,
+          totalAmount: 200000,
+        ),
+      ],
+      totalAmount: 200000,
+    );
+    await returnStore.add(salesReturn);
+
+    final result = await service().returnItems(
+      delivery: delivery(),
+      returnId: salesReturn.id,
+      customerName: 'مشتری آزمایشی',
+      quantities: {'energy-bar-100g-ginger': 99},
+    );
+
+    expect(result.changed, isFalse);
+    expect(await financialStore.getBalance('customer-customer-1'), 800000);
+    expect((await financialStore.getTransactions()).length, 2);
+  });
+
   test('cannot return more than delivered quantity', () async {
     await seedDeliveryAndSale();
 
