@@ -160,12 +160,6 @@ class ProductionOrderExecutionService {
 
     _validateExistingReservations(orderReservations, requirements);
 
-    if (order.status != SalesOrderStatus.inProduction) {
-      await orderStore.update(
-        _withStatus(order, SalesOrderStatus.inProduction),
-      );
-    }
-
     final movements = await inventoryStore.getMovements();
     final movementById = {
       for (final movement in movements) movement.id: movement,
