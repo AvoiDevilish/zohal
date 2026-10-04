@@ -112,6 +112,7 @@ void main() {
 
     await service().reserve(currentOrder, analysisResult);
     final result = await service().startProduction(
+      order(status: SalesOrderStatus.inProduction),
       analysisResult,
     );
 
@@ -136,6 +137,7 @@ void main() {
     await service().reserve(currentOrder, analysisResult);
 
     final first = await service().startProduction(
+      order(status: SalesOrderStatus.inProduction),
       analysisResult,
     );
 
