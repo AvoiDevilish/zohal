@@ -293,6 +293,7 @@ void main() {
     await service.postSaleReturn(salesReturn, customerName: 'مشتری بستانکار');
 
     expect(await store.getBalance('customer-customer-credit'), -100000);
+    expect(await service.getCustomerCredit('customer-credit'), 100000);
     expect(await service.getInvoiceOutstanding(
       orderId: 'invoice-credit-source',
       customerId: 'customer-credit',
