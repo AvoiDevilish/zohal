@@ -9,6 +9,8 @@ import '../sales/sales_receipt.dart';
 import '../sales/sales_receipt_store.dart';
 import '../sales/sales_credit_allocation.dart';
 import '../sales/sales_credit_allocation_store.dart';
+import '../sales/sales_credit_entry.dart';
+import '../sales/sales_credit_entry_store.dart';
 import '../sales/customer_store.dart';
 
 class SalesFinancialService {
@@ -70,6 +72,10 @@ class SalesFinancialService {
     if (existing != null) return existing;
 
     final customerAccountId = 'customer-' + salesReturn.customerId;
+    final balanceBeforeReturn = await store.getBalance(customerAccountId);
+    final creditCreated = balanceBeforeReturn > 0
+        ? (salesReturn.totalAmount - balanceBeforeReturn).clamp(0, salesReturn.totalAmount)
+        : salesReturn.totalAmount;
     await store.ensureAccount(FinancialAccount(
       id: customerAccountId,
       name: customerName,
@@ -103,34 +109,28 @@ class SalesFinancialService {
       ],
     );
     await store.addTransaction(transaction);
+
+    if (creditCreated > 0) {
+      await SalesCreditEntryStore.instance.add(SalesCreditEntry(
+        id: 'credit-' + salesReturn.id,
+        customerId: salesReturn.customerId,
+        amount: creditCreated,
+        createdAt: salesReturn.createdAt,
+        referenceId: salesReturn.id,
+        note: 'اعتبار ایجادشده از برگشت فروش',
+      ));
+    }
     return transaction;
   }
 
   Future<int> getCustomerCredit(String customerId) async {
-    final transactions = await store.getTransactions();
-    final returnedCredit = transactions
-        .where((transaction) =>
-            transaction.type == 'saleReturn' &&
-            transaction.entries.any(
-              (entry) =>
-                  entry.accountId == 'customer-' + customerId &&
-                  !entry.isDebit,
-            ))
-        .fold<int>(
-          0,
-          (sum, transaction) => sum +
-              transaction.entries
-                  .where(
-                    (entry) =>
-                        entry.accountId == 'customer-' + customerId &&
-                        !entry.isDebit,
-                  )
-                  .fold<int>(0, (entrySum, entry) => entrySum + entry.amount),
-        );
+    final generatedCredit = (await SalesCreditEntryStore.instance
+            .getByCustomerId(customerId))
+        .fold<int>(0, (sum, entry) => sum + entry.amount);
     final allocatedCredit = (await SalesCreditAllocationStore.instance
             .getByCustomerId(customerId))
         .fold<int>(0, (sum, allocation) => sum + allocation.amount);
-    final available = returnedCredit - allocatedCredit;
+    final available = generatedCredit - allocatedCredit;
     return available > 0 ? available : 0;
   }
 
