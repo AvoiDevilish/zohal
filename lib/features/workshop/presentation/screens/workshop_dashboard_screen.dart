@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:zohal_android_test/core/costing/production_cost_store.dart';
 import 'package:zohal_android_test/core/workshop/production_batch.dart';
 import 'package:zohal_android_test/core/workshop/production_batch_store.dart';
+import 'package:zohal_android_test/core/sales/sales_order.dart';
+import 'package:zohal_android_test/core/sales/sales_order_store.dart';
 
 class WorkshopDashboardScreen extends StatefulWidget {
   final ProductionBatchStore batchStore;
@@ -21,6 +23,7 @@ class WorkshopDashboardScreen extends StatefulWidget {
 
 class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
   late Future<_WorkshopDashboardData> _future;
+  final SalesOrderStore _orderStore = SalesOrderStore.instance;
 
   @override
   void initState() {
@@ -30,6 +33,7 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
 
   Future<_WorkshopDashboardData> _load() async {
     final batches = await widget.batchStore.getAll();
+    final orders = await _orderStore.getAll();
     final costs = await widget.costStore.getAll();
     final now = DateTime.now();
 
@@ -56,6 +60,7 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
       totalCost: totalCost,
       unitCost: unitCost,
       recent: recent.take(5).toList(),
+      incomingOrders: orders.where((order) => order.status == SalesOrderStatus.workshopPending || order.status == SalesOrderStatus.workshopAnalyzing).toList(),
     );
   }
 
@@ -96,6 +101,22 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              _IncomingOrders(
+                orders: data.incomingOrders,
+                onAnalyze: (order) async {
+                  await _orderStore.update(SalesOrder(
+                    id: order.id,
+                    customerId: order.customerId,
+                    customerName: order.customerName,
+                    orderDate: order.orderDate,
+                    lines: order.lines,
+                    totalAmount: order.totalAmount,
+                    status: SalesOrderStatus.workshopAnalyzing,
+                  ));
+                  _refresh();
+                },
+              ),
+              const SizedBox(height: 16),
               _Section(
                 title: 'وضعیت تولید',
                 children: [
@@ -153,6 +174,7 @@ class _WorkshopDashboardData {
   final double totalCost;
   final double unitCost;
   final List<ProductionBatch> recent;
+  final List<SalesOrder> incomingOrders;
 
   const _WorkshopDashboardData({
     required this.active,
@@ -160,7 +182,38 @@ class _WorkshopDashboardData {
     required this.totalCost,
     required this.unitCost,
     required this.recent,
+    required this.incomingOrders,
   });
+}
+
+class _IncomingOrders extends StatelessWidget {
+  const _IncomingOrders({required this.orders, required this.onAnalyze});
+  final List<SalesOrder> orders;
+  final Future<void> Function(SalesOrder order) onAnalyze;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('سفارش‌های ورودی کارگاه', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          if (orders.isEmpty)
+            const Text('سفارش جدیدی در صف کارگاه نیست.')
+          else
+            ...orders.map((order) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('سفارش ' + order.id),
+              subtitle: Text(order.customerName + ' • ' + order.lines.length.toString() + ' ردیف • ' + order.status.title),
+              trailing: order.status == SalesOrderStatus.workshopPending
+                  ? FilledButton(onPressed: () => onAnalyze(order), child: const Text('تحلیل'))
+                  : const Chip(label: Text('در حال تحلیل')),
+            )),
+        ]),
+      ),
+    );
+  }
 }
 
 class _Section extends StatelessWidget {
