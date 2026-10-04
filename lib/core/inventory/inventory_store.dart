@@ -129,33 +129,67 @@ class InventoryStore {
   }
 
   Future<void> reserve(InventoryReservation reservation) async {
-    if (reservation.quantity <= 0) {
-      throw ArgumentError.value(
-        reservation.quantity,
-        'quantity',
-        'باید بیشتر از صفر باشد.',
-      );
+    await reserveAll([reservation]);
+  }
+
+  /// Persists a group of reservations as one logical operation.
+  ///
+  /// Validation is completed for the whole group before anything is written.
+  /// This prevents a production order from ending up with only some of its
+  /// material reservations when a later reservation cannot be fulfilled.
+  Future<void> reserveAll(List<InventoryReservation> newReservations) async {
+    if (newReservations.isEmpty) return;
+
+    final incomingIds = <String>{};
+    for (final reservation in newReservations) {
+      if (!incomingIds.add(reservation.id)) {
+        throw StateError('شناسه رزرو در یک عملیات تکراری است.');
+      }
+      if (reservation.quantity <= 0) {
+        throw ArgumentError.value(
+          reservation.quantity,
+          'quantity',
+          'باید بیشتر از صفر باشد.',
+        );
+      }
     }
 
     final reservations = await getReservations();
-    final existing = reservations.where((item) => item.id == reservation.id);
-    if (existing.isNotEmpty) {
-      final current = existing.first;
-      if (current.itemId != reservation.itemId ||
-          (current.quantity - reservation.quantity).abs() > 0.000001 ||
-          current.referenceId != reservation.referenceId) {
-        throw StateError('شناسه رزرو برای اطلاعات دیگری استفاده شده است.');
+    final byId = {for (final reservation in reservations) reservation.id: reservation};
+    final additions = <InventoryReservation>[];
+
+    for (final reservation in newReservations) {
+      final existing = byId[reservation.id];
+      if (existing != null) {
+        if (existing.itemId != reservation.itemId ||
+            (existing.quantity - reservation.quantity).abs() > 0.000001 ||
+            existing.referenceId != reservation.referenceId) {
+          throw StateError('شناسه رزرو برای اطلاعات دیگری استفاده شده است.');
+        }
+        continue;
       }
-      return;
+      additions.add(reservation);
     }
 
-    final available = await getAvailableStock(reservation.itemId);
-    if (reservation.quantity > available + 0.000001) {
-      throw StateError('موجودی آزاد برای رزرو کافی نیست.');
+    if (additions.isEmpty) return;
+
+    final stagedByItem = <String, double>{};
+    for (final reservation in additions) {
+      stagedByItem.update(
+        reservation.itemId,
+        (current) => current + reservation.quantity,
+        ifAbsent: () => reservation.quantity,
+      );
     }
 
-    reservations.add(reservation);
+    for (final entry in stagedByItem.entries) {
+      final available = await getAvailableStock(entry.key);
+      if (entry.value > available + 0.000001) {
+        throw StateError('موجودی آزاد برای رزرو کافی نیست.');
+      }
+    }
 
+    reservations.addAll(additions);
     await LocalStore.instance.writeList(
       _reservationStorageKey,
       reservations.map((item) => item.toMap()).toList(),
