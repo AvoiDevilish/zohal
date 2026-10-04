@@ -34,6 +34,7 @@ class SalesReturn {
     required this.deliveryId,
     required this.orderId,
     required this.customerId,
+    required this.customerName,
     required this.createdAt,
     required this.lines,
     required this.totalAmount,
@@ -44,6 +45,7 @@ class SalesReturn {
   final String deliveryId;
   final String orderId;
   final String customerId;
+  final String customerName;
   final DateTime createdAt;
   final List<SalesReturnLine> lines;
   final int totalAmount;
@@ -54,6 +56,7 @@ class SalesReturn {
     'deliveryId': deliveryId,
     'orderId': orderId,
     'customerId': customerId,
+    'customerName': customerName,
     'createdAt': createdAt.toIso8601String(),
     'lines': lines.map((line) => line.toMap()).toList(),
     'totalAmount': totalAmount,
@@ -66,6 +69,7 @@ class SalesReturn {
       deliveryId: map['deliveryId'] as String,
       orderId: map['orderId'] as String,
       customerId: map['customerId'] as String,
+      customerName: map['customerName'] as String? ?? 'مشتری',
       createdAt: DateTime.parse(map['createdAt'] as String),
       lines: (map['lines'] as List)
           .whereType<Map>()
