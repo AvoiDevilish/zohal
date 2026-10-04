@@ -1,7 +1,7 @@
 class SalesReceipt {
   const SalesReceipt({
     required this.id,
-    required this.orderId,
+    this.orderId,
     required this.customerId,
     required this.customerName,
     required this.payerId,
@@ -12,7 +12,7 @@ class SalesReceipt {
   });
 
   final String id;
-  final String orderId;
+  final String? orderId;
   final String customerId;
   final String customerName;
   final String payerId;
@@ -35,7 +35,7 @@ class SalesReceipt {
 
   factory SalesReceipt.fromMap(Map<String, dynamic> map) => SalesReceipt(
     id: map['id'] as String,
-    orderId: map['orderId'] as String,
+    orderId: map['orderId'] as String?,
     customerId: map['customerId'] as String,
     customerName: map['customerName'] as String,
     payerId: map['payerId'] as String,
