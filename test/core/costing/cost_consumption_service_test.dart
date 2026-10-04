@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zohal_android_test/core/costing/cost_allocation.dart';
 import 'package:zohal_android_test/core/costing/cost_allocation_store.dart';
 import 'package:zohal_android_test/core/costing/cost_consumption_service.dart';
 import 'package:zohal_android_test/core/costing/cost_layer.dart';
@@ -224,4 +225,64 @@ void main() {
     expect(layer1!.remainingQuantity, 10000);
     expect(layer2!.remainingQuantity, 5000);
   });
+
+  test(
+    'repairs a partially persisted consumption from allocations without double-decrementing',
+    () async {
+      await layerStore.add(
+        CostLayer(
+          id: 'layer-recovery',
+          materialId: 'date',
+          materialName: 'خرمای خشت',
+          quantity: 10000,
+          remainingQuantity: 10000,
+          unit: 'g',
+          unitCost: 12,
+          createdAt: DateTime(2026, 1, 1),
+          purchaseId: 'purchase-recovery',
+        ),
+      );
+
+      await allocationStore.add(
+        CostAllocation(
+          id: 'cost-allocation-recovery-0',
+          materialId: 'date',
+          materialName: 'خرمای خشت',
+          costLayerId: 'layer-recovery',
+          quantity: 4000,
+          unit: 'g',
+          unitCost: 12,
+          totalCost: 48000,
+          referenceId: 'production-recovery',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      );
+
+      final result = await service.consume(
+        referenceId: 'production-recovery',
+        materialId: 'date',
+        quantity: 4000,
+      );
+
+      expect(result.alreadyConsumed, isTrue);
+      expect(result.totalCost, 48000);
+
+      final layer = await layerStore.getById('layer-recovery');
+      expect(layer!.remainingQuantity, 6000);
+
+      final allocations = await allocationStore.getAllocations(
+        referenceId: 'production-recovery',
+      );
+      expect(allocations, hasLength(1));
+
+      final retry = await service.consume(
+        referenceId: 'production-recovery',
+        materialId: 'date',
+        quantity: 4000,
+      );
+      expect(retry.alreadyConsumed, isTrue);
+      expect((await layerStore.getById('layer-recovery'))!.remainingQuantity, 6000);
+    },
+  );
+
 }
