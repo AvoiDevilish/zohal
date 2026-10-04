@@ -3,6 +3,11 @@ import 'financial_entry.dart';
 import 'financial_store.dart';
 import '../sales/sales_delivery.dart';
 import '../sales/sales_return.dart';
+import '../sales/sales_delivery_store.dart';
+import '../sales/sales_return_store.dart';
+import '../sales/sales_receipt.dart';
+import '../sales/sales_receipt_store.dart';
+import '../sales/customer_store.dart';
 
 class SalesFinancialService {
   final FinancialStore store;
@@ -104,6 +109,9 @@ class SalesFinancialService {
     required String customerId,
     required String customerName,
     required int amount,
+    String? orderId,
+    String? payerId,
+    String? payerName,
     String? note,
   }) async {
     if (amount <= 0) throw ArgumentError('مبلغ دریافت باید بیشتر از صفر باشد.');
@@ -113,12 +121,50 @@ class SalesFinancialService {
     if (existing != null) return existing;
 
     final customerAccountId = 'customer-' + customerId;
-    final outstanding = await store.getBalance(customerAccountId);
-    if (outstanding <= 0) {
-      throw StateError('این مشتری بدهی قابل تسویه ندارد.');
+    final receiptStore = SalesReceiptStore.instance;
+    final deliveryStore = SalesDeliveryStore.instance;
+    final returnStore = SalesReturnStore.instance;
+
+    var invoiceOutstanding = await store.getBalance(customerAccountId);
+    if (orderId != null) {
+      final deliveries = await deliveryStore.getByOrderId(orderId);
+      if (deliveries.isEmpty) {
+        throw StateError('فاکتور موردنظر پیدا نشد یا هنوز تحویلی برای آن ثبت نشده است.');
+      }
+      if (deliveries.any((delivery) => delivery.customerId != customerId)) {
+        throw StateError('فاکتور متعلق به این مشتری نیست.');
+      }
+
+      var invoiceTotal = 0;
+      for (final delivery in deliveries) {
+        invoiceTotal += delivery.totalAmount;
+        final returns = await returnStore.getByDeliveryId(delivery.id);
+        invoiceTotal -= returns.fold<int>(0, (sum, item) => sum + item.totalAmount);
+      }
+      final previousReceipts = await receiptStore.getByOrderId(orderId);
+      final allocated = previousReceipts.fold<int>(0, (sum, receipt) => sum + receipt.amount);
+      invoiceOutstanding = invoiceTotal - allocated;
+      if (invoiceOutstanding <= 0) {
+        throw StateError('این فاکتور بدهی قابل تسویه ندارد.');
+      }
+      if (amount > invoiceOutstanding) {
+        throw StateError('مبلغ دریافت نمی‌تواند بیشتر از مانده فاکتور باشد.');
+      }
+    } else {
+      if (invoiceOutstanding <= 0) {
+        throw StateError('این مشتری بدهی قابل تسویه ندارد.');
+      }
+      if (amount > invoiceOutstanding) {
+        throw StateError('مبلغ دریافت نمی‌تواند بیشتر از بدهی مشتری باشد.');
+      }
     }
-    if (amount > outstanding) {
-      throw StateError('مبلغ دریافت نمی‌تواند بیشتر از بدهی مشتری باشد.');
+
+    final effectivePayerId = payerId ?? customerId;
+    final effectivePayerName = payerName ?? customerName;
+    final payer = await CustomerStore.instance.getAll();
+    final payerMatch = payer.where((item) => item.id == effectivePayerId);
+    if (payerMatch.isEmpty) {
+      throw StateError('پرداخت‌کننده باید قبلاً به عنوان مشتری ثبت شده باشد.');
     }
 
     await store.ensureAccount(FinancialAccount(
@@ -143,17 +189,28 @@ class SalesFinancialService {
           accountId: 'cash',
           amount: amount,
           isDebit: true,
-          note: 'دریافت وجه',
+          note: 'دریافت وجه از ' + effectivePayerName,
         ),
         FinancialEntry(
           accountId: customerAccountId,
           amount: amount,
           isDebit: false,
-          note: 'تسویه بدهی مشتری',
+          note: 'تسویه بدهی مشتری ' + customerName,
         ),
       ],
     );
     await store.addTransaction(transaction);
+
+    await receiptStore.add(SalesReceipt(
+      id: receiptId,
+      orderId: orderId,
+      customerId: customerId,
+      customerName: customerName,
+      payerId: effectivePayerId,
+      payerName: effectivePayerName,
+      amount: amount,
+      createdAt: transaction.createdAt,
+      note: note,
+    ));
     return transaction;
-  }
-}
+  }}
