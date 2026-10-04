@@ -59,6 +59,8 @@ void main() {
         ],
         sesameMaterialId: 'sesame',
         sesameMaterialName: 'کنجد',
+        datePitMaterialId: 'raw_date_pit',
+        datePitMaterialName: 'هسته خرما',
         flavorMaterialId: 'ginger',
         flavorMaterialName: 'پودر زنجبیل',
         packagingRules: packagingRules,
@@ -120,7 +122,7 @@ void main() {
           .where((m) => m.referenceId == 'production-test-1')
           .toList();
 
-      expect(productionMovements, hasLength(7));
+      expect(productionMovements, hasLength(8));
 
       expect(
         productionMovements.where(
@@ -133,7 +135,7 @@ void main() {
         productionMovements.where(
           (m) => m.movementType == InventoryMovementType.productionOutput,
         ),
-        hasLength(1),
+        hasLength(2),
       );
 
       final output = productionMovements.firstWhere(
@@ -144,7 +146,8 @@ void main() {
       expect(output.quantity, 20);
       expect(output.unit, 'عدد');
 
-      expect(await inventoryStore.getStock('date'), closeTo(607, 0.001));
+      expect(await inventoryStore.getStock('date'), closeTo(452.222222, 0.001));
+      expect(await inventoryStore.getStock('raw_date_pit'), closeTo(154.777778, 0.001));
       expect(await inventoryStore.getStock('peanut'), closeTo(258.215, 0.001));
       expect(await inventoryStore.getStock('walnut'), closeTo(138.81, 0.001));
       expect(await inventoryStore.getStock('cashew'), closeTo(165.675, 0.001));
