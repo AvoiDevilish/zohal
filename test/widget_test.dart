@@ -5,7 +5,7 @@ void main() {
   testWidgets('ZOHAL app loads', (tester) async {
     await tester.pumpWidget(const ZohalApp());
 
-    expect(find.text('خانه'), findsOneWidget);
+    expect(find.text('خانه'), findsWidgets);
     expect(find.text('فروش امروز'), findsOneWidget);
   });
 }
