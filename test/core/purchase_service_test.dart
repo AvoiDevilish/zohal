@@ -80,6 +80,62 @@ void main() {
     expect((await purchases.getAll()).length, 1);
   });
 
+  test('reconciles a purchase after inventory and finance were persisted first', () async {
+    final item = purchase();
+
+    await inventory.addMovement(
+      InventoryMovement(
+        id: 'purchase-${item.id}-raw_date_khesht',
+        itemId: 'raw_date_khesht',
+        itemName: 'خرما خشت',
+        itemType: 'rawMaterial',
+        quantity: 10,
+        unit: 'کیلوگرم',
+        movementType: InventoryMovementType.purchase,
+        timestamp: item.createdAt,
+        unitCost: 500000,
+        referenceId: item.id,
+      ),
+    );
+
+    await finance.ensureAccount(FinancialAccount(
+      id: 'supplier-${item.supplierId}',
+      name: item.supplierName,
+      type: FinancialAccountType.supplier,
+    ));
+    await finance.ensureAccount(const FinancialAccount(
+      id: 'inventory-asset',
+      name: 'موجودی کالا و مواد',
+      type: FinancialAccountType.inventoryAsset,
+    ));
+    await finance.addTransaction(
+      FinancialTransaction(
+        id: 'purchase-${item.id}',
+        createdAt: item.createdAt,
+        type: 'purchase',
+        referenceId: item.id,
+        entries: [
+          FinancialEntry(
+            accountId: 'inventory-asset',
+            amount: item.totalAmount,
+            isDebit: true,
+          ),
+          FinancialEntry(
+            accountId: 'supplier-${item.supplierId}',
+            amount: item.totalAmount,
+            isDebit: false,
+          ),
+        ],
+      ),
+    );
+
+    await service().recordPurchase(item);
+
+    expect((await purchases.getAll()).single.id, item.id);
+    expect(await inventory.getStock('raw_date_khesht'), 10);
+    expect((await finance.getTransactions()).length, 1);
+  });
+
   test('purchase return reverses stock and supplier payable', () async {
     await service().recordPurchase(purchase());
 
