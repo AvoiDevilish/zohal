@@ -213,7 +213,11 @@ class PurchaseService {
         ),
       ],
     );
-    await financialStore.addTransaction(transaction);
+    final existingTransaction =
+        await financialStore.getTransaction(transaction.id);
+    if (existingTransaction == null) {
+      await financialStore.addTransaction(transaction);
+    }
 
     if (creditCreated > 0) {
       await SupplierCreditEntryStore.instance.add(SupplierCreditEntry(
