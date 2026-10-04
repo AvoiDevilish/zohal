@@ -55,6 +55,13 @@ class SalesReturnService {
       if (existingReturn.deliveryId != sourceDelivery.id) {
         throw StateError('شناسه برگشت برای تحویل دیگری استفاده شده است.');
       }
+
+      // Reconcile a return that was persisted before its financial entry.
+      await financialService.postSaleReturn(
+        existingReturn,
+        customerName: customerName,
+      );
+
       return SalesReturnResult(salesReturn: existingReturn, changed: false);
     }
 
