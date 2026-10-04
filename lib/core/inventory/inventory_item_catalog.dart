@@ -223,6 +223,14 @@ List<InventoryItem> get initialInventoryItems => [
         '«خشت» احتمالاً به خاستگاه/نام تجاری منطقه‌ای اشاره دارد؛ تا زمان تأیید رقم دقیق، پروفایل عمومی خرما استفاده می‌شود.',
   ),
   _food(
+    id: 'raw_date_pit',
+    name: 'هسته خرما',
+    englishName: 'Date pit',
+    category: 'هسته خرما',
+    nutrition: _datesNutrition(),
+    notes: 'محصول جانبی قابل استفاده حاصل از جداسازی هسته خرما؛ ضایعات نیست.',
+  ),
+  _food(
     id: 'raw_date_kabkab',
     name: 'خرما کبکاب',
     englishName: 'Kabkab date',
