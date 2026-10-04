@@ -16,7 +16,21 @@ class ProductionRequirement {
   });
 
   @override
-  String toString() {
-    return '$materialName: $quantity $unit';
-  }
+  String toString() => '$materialName: $quantity $unit';
+}
+
+class ProductionByproduct {
+  final String itemId;
+  final String itemName;
+  final String itemType;
+  final double quantity;
+  final String unit;
+
+  const ProductionByproduct({
+    required this.itemId,
+    required this.itemName,
+    required this.itemType,
+    required this.quantity,
+    required this.unit,
+  });
 }
