@@ -104,35 +104,33 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      SizedBox(
-                        height: 82,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _DashboardCard(
-                                icon: Icons.arrow_downward_rounded,
-                                title: 'بستانکاری',
-                                onTap: () {},
-                                child: const Text(
-                                  '— تومان',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                                ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _DashboardCard(
+                              icon: Icons.arrow_downward_rounded,
+                              title: 'بستانکاری',
+                              onTap: () {},
+                              child: const Text(
+                                '— تومان',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _DashboardCard(
-                                icon: Icons.arrow_upward_rounded,
-                                title: 'بدهکاری',
-                                onTap: () {},
-                                child: const Text(
-                                  '— تومان',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                                ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _DashboardCard(
+                              icon: Icons.arrow_upward_rounded,
+                              title: 'بدهکاری',
+                              onTap: () {},
+                              child: const Text(
+                                '— تومان',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       _DashboardCard(
