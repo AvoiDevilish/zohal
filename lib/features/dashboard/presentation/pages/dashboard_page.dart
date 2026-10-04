@@ -4,6 +4,7 @@ import '../../../../core/design/app_colors.dart';
 import '../../../../core/sales/customer_store.dart';
 import '../../../../core/sales/supplier_store.dart';
 import '../../../../core/sales/sales_order_store.dart';
+import '../../../../core/sales/product_variant_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
 import '../../../people/presentation/pages/people_page.dart';
 import '../../../products/presentation/pages/products_page.dart';
@@ -21,22 +22,37 @@ class _DashboardPageState extends State<DashboardPage> {
   int orderCount = 0;
   int customerCount = 0;
   int supplierCount = 0;
+  int productCount = 0;
 
   @override
   void initState() {
     super.initState();
+    _orders.addListener(_onOrdersChanged);
     load();
+  }
+
+  void _onOrdersChanged() {
+    if (mounted) load();
+  }
+
+  @override
+  void dispose() {
+    _orders.removeListener(_onOrdersChanged);
+    super.dispose();
   }
 
   Future<void> load() async {
     final rows = await _orders.getAll();
     final customers = await CustomerStore.instance.getAll();
     final suppliers = await SupplierStore.instance.getAll();
+    await ProductVariantStore.instance.ensureSeeded();
+    final products = await ProductVariantStore.instance.getAll();
     if (!mounted) return;
     setState(() {
-      orderCount = rows.length;
+      orderCount = rows.where((item) => item.status == SalesOrderStatus.delivered).length;
       customerCount = customers.where((item) => item.isActive).length;
       supplierCount = suppliers.where((item) => item.isActive).length;
+      productCount = products.where((item) => item.isActive).length;
     });
   }
 
@@ -62,16 +78,7 @@ class _DashboardPageState extends State<DashboardPage> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
         children: [
-          const Text(
-            'خانه',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'خلاصه وضعیت کسب‌وکار',
-            style: TextStyle(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
           _DashboardCard(
             icon: Icons.point_of_sale_outlined,
             title: 'فروش امروز',
@@ -133,7 +140,7 @@ class _DashboardPageState extends State<DashboardPage> {
             icon: Icons.sell_outlined,
             title: 'محصولات',
             onTap: openProducts,
-            child: const _MetricRow(label: 'محصولات فعال', value: '۱۲'),
+            child: _MetricRow(label: 'محصولات فعال', value: productCount.toString()),
           ),
           const SizedBox(height: 12),
           _DashboardCard(
