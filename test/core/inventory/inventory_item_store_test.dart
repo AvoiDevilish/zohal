@@ -17,7 +17,7 @@ void main() {
       final items = await store.getItems();
 
       expect(items.length, initialInventoryItems.length);
-      expect(items.where((item) => item.isFood).length, 12);
+      expect(items.where((item) => item.isFood).length, 13);
       expect(items.where((item) => !item.isFood).length, 7);
       expect(items.any((item) => item.name == 'خرما کبکاب'), isTrue);
       expect(items.any((item) => item.name == 'ظرف یک کیلویی'), isTrue);
