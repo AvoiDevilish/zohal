@@ -260,8 +260,8 @@ class _PersonCard extends StatelessWidget {
               if (value == 'edit') onEdit();
               if (value == 'deactivate') onDeactivate();
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'edit', child: Text('ویرایش')),
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'edit', child: Text('ویرایش')),
               PopupMenuItem(value: 'deactivate', child: Text(actionLabel)),
             ],
           ),
