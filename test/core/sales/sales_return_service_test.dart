@@ -7,6 +7,7 @@ import 'package:zohal_android_test/core/inventory/inventory_movement.dart';
 import 'package:zohal_android_test/core/inventory/inventory_store.dart';
 import 'package:zohal_android_test/core/sales/sales_delivery.dart';
 import 'package:zohal_android_test/core/sales/sales_delivery_store.dart';
+import 'package:zohal_android_test/core/sales/sales_return.dart';
 import 'package:zohal_android_test/core/sales/sales_return_service.dart';
 import 'package:zohal_android_test/core/sales/sales_return_store.dart';
 
