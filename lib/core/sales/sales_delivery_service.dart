@@ -133,6 +133,7 @@ class SalesDeliveryService {
           quantity: entry.value,
           unitSellingPrice: line.unitSellingPrice,
           totalAmount: entry.value * line.unitSellingPrice,
+          productName: line.productName,
         );
       }).toList(),
       totalAmount: totalAmount,
