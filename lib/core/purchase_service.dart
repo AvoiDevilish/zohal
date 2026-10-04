@@ -98,7 +98,17 @@ class PurchaseService {
         ),
       ],
     );
-    await financialStore.addTransaction(transaction);
+    final existingTransaction = await financialStore.getTransaction(
+      transaction.id,
+    );
+    if (existingTransaction == null) {
+      await financialStore.addTransaction(transaction);
+    } else if (existingTransaction.referenceId != purchase.id ||
+        existingTransaction.type != 'purchase' ||
+        existingTransaction.entries.length != 2) {
+      throw StateError('سند مالی خرید با اطلاعات مورد انتظار همخوانی ندارد.');
+    }
+
     await purchaseStore.add(purchase);
     return purchase;
   }
@@ -217,17 +227,30 @@ class PurchaseService {
         await financialStore.getTransaction(transaction.id);
     if (existingTransaction == null) {
       await financialStore.addTransaction(transaction);
+    } else if (existingTransaction.referenceId != returnId ||
+        existingTransaction.type != 'purchaseReturn' ||
+        existingTransaction.entries.length != 2) {
+      throw StateError('سند مالی برگشت خرید با اطلاعات مورد انتظار همخوانی ندارد.');
     }
 
     if (creditCreated > 0) {
-      await SupplierCreditEntryStore.instance.add(SupplierCreditEntry(
-        id: 'supplier-credit-' + returnId,
-        supplierId: purchase.supplierId,
-        amount: creditCreated,
-        createdAt: now,
-        referenceId: returnId,
-        note: 'اعتبار ایجادشده از برگشت خرید',
-      ));
+      final creditStore = SupplierCreditEntryStore.instance;
+      final creditId = 'supplier-credit-' + returnId;
+      final existingCredit = await creditStore.getById(creditId);
+      if (existingCredit == null) {
+        await creditStore.add(SupplierCreditEntry(
+          id: creditId,
+          supplierId: purchase.supplierId,
+          amount: creditCreated,
+          createdAt: now,
+          referenceId: returnId,
+          note: 'اعتبار ایجادشده از برگشت خرید',
+        ));
+      } else if (existingCredit.supplierId != purchase.supplierId ||
+          existingCredit.referenceId != returnId ||
+          existingCredit.amount != creditCreated) {
+        throw StateError('اعتبار برگشت خرید با اطلاعات مورد انتظار همخوانی ندارد.');
+      }
     }
 
     final result = PurchaseReturn(
