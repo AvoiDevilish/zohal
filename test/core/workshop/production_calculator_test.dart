@@ -43,13 +43,17 @@ void main() {
         nutAllocations: allocations,
         sesameMaterialId: 'sesame',
         sesameMaterialName: 'کنجد',
+        datePitMaterialId: 'raw_date_pit',
+        datePitMaterialName: 'هسته خرما',
         flavorMaterialId: 'ginger',
         flavorMaterialName: 'پودر زنجبیل',
       );
 
       expect(result.totalWeightGrams, 2000);
 
-      expect(result.findMaterial('date')?.quantity, closeTo(1393, 0.0001));
+      expect(result.findMaterial('date')?.quantity, closeTo(1547.7777778, 0.0001));
+
+      expect(result.findByproduct('raw_date_pit')?.quantity, closeTo(154.7777778, 0.0001));
 
       expect(result.findMaterial('peanut')?.quantity, closeTo(241.785, 0.0001));
 
@@ -61,7 +65,7 @@ void main() {
 
       expect(result.findMaterial('ginger')?.quantity, closeTo(10, 0.0001));
 
-      expect(result.totalRequiredWeightGrams, closeTo(2000, 0.0001));
+      expect(result.totalRequiredWeightGrams, closeTo(2154.7777778, 0.0001));
     });
 
     test('includes packaging requirements in production calculation', () {
