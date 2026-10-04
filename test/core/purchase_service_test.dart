@@ -7,6 +7,9 @@ import 'package:zohal_android_test/core/purchase.dart';
 import 'package:zohal_android_test/core/purchase_service.dart';
 import 'package:zohal_android_test/core/purchase_store.dart';
 import 'package:zohal_android_test/core/purchase_return_store.dart';
+import 'package:zohal_android_test/core/purchase/supplier_credit_allocation_store.dart';
+import 'package:zohal_android_test/core/purchase/supplier_credit_entry_store.dart';
+import 'package:zohal_android_test/core/purchase/supplier_credit_settlement_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +18,9 @@ void main() {
   final purchases = PurchaseStore.instance;
   final finance = FinancialStore.instance;
   final purchaseReturns = PurchaseReturnStore.instance;
+  final creditEntries = SupplierCreditEntryStore.instance;
+  final creditAllocations = SupplierCreditAllocationStore.instance;
+  final creditSettlements = SupplierCreditSettlementStore.instance;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -22,24 +28,31 @@ void main() {
     await purchases.clear();
     await finance.clear();
     await purchaseReturns.clear();
+    await creditEntries.clear();
+    await creditAllocations.clear();
+    await creditSettlements.clear();
   });
 
-  Purchase purchase() => Purchase(
-    id: 'purchase-1',
+  Purchase purchase({
+    String id = 'purchase-1',
+    int totalAmount = 5000000,
+    double quantity = 10,
+  }) => Purchase(
+    id: id,
     supplierId: 'supplier-1',
     supplierName: 'تأمین‌کننده آزمایشی',
     createdAt: DateTime(2026, 10, 5),
-    lines: const [
+    lines: [
       PurchaseLine(
         itemId: 'raw_date_khesht',
         itemName: 'خرما خشت',
         itemType: 'rawMaterial',
-        quantity: 10,
+        quantity: quantity,
         unit: 'کیلوگرم',
         unitCost: 500000,
       ),
     ],
-    totalAmount: 5000000,
+    totalAmount: totalAmount,
   );
 
   PurchaseService service() => PurchaseService(
@@ -172,6 +185,191 @@ void main() {
         supplierId: 'supplier-1',
         supplierName: 'تأمین‌کننده آزمایشی',
         amount: 1,
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('paid purchase return creates reusable supplier credit', () async {
+    await service().recordPurchase(purchase());
+    await service().recordSupplierPayment(
+      paymentId: 'payment-full',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 5000000,
+    );
+
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-credit',
+      quantities: {'raw_date_khesht': 4},
+    );
+
+    expect(await finance.getBalance('supplier-supplier-1'), 2000000);
+    expect(await service().getSupplierCredit('supplier-1'), 2000000);
+    expect((await creditEntries.getBySupplierId('supplier-1')).single.amount, 2000000);
+  });
+
+  test('unpaid purchase return does not create supplier credit', () async {
+    await service().recordPurchase(purchase());
+
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-no-credit',
+      quantities: {'raw_date_khesht': 2},
+    );
+
+    expect(await finance.getBalance('supplier-supplier-1'), -4000000);
+    expect(await service().getSupplierCredit('supplier-1'), 0);
+    expect(await creditEntries.getAll(), isEmpty);
+  });
+
+  test('partial return after partial payment creates only excess supplier credit', () async {
+    await service().recordPurchase(purchase());
+    await service().recordSupplierPayment(
+      paymentId: 'payment-partial',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 4500000,
+    );
+
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-partial-credit',
+      quantities: {'raw_date_khesht': 2},
+    );
+
+    expect(await finance.getBalance('supplier-supplier-1'), 500000);
+    expect(await service().getSupplierCredit('supplier-1'), 500000);
+  });
+
+  test('supplier credit can be allocated to a later purchase without a financial movement', () async {
+    await service().recordPurchase(purchase());
+    await service().recordSupplierPayment(
+      paymentId: 'payment-full',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 5000000,
+    );
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-credit',
+      quantities: {'raw_date_khesht': 4},
+    );
+
+    final laterPurchase = purchase(
+      id: 'purchase-2',
+      totalAmount: 3000000,
+      quantity: 6,
+    );
+    await service().recordPurchase(laterPurchase);
+
+    final beforeTransactions = (await finance.getTransactions()).length;
+    final allocation = await service().applySupplierCredit(
+      allocationId: 'allocation-1',
+      purchaseId: laterPurchase.id,
+      supplierId: 'supplier-1',
+      amount: 1500000,
+    );
+
+    expect(allocation.amount, 1500000);
+    expect(await service().getSupplierCredit('supplier-1'), 500000);
+    expect(
+      await service().getPurchaseOutstanding(
+        purchaseId: laterPurchase.id,
+        supplierId: 'supplier-1',
+      ),
+      1500000,
+    );
+    expect((await finance.getTransactions()).length, beforeTransactions);
+  });
+
+  test('supplier credit allocation is idempotent', () async {
+    await service().recordPurchase(purchase());
+    await service().recordSupplierPayment(
+      paymentId: 'payment-full',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 5000000,
+    );
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-credit',
+      quantities: {'raw_date_khesht': 4},
+    );
+
+    final laterPurchase = purchase(
+      id: 'purchase-2',
+      totalAmount: 3000000,
+      quantity: 6,
+    );
+    await service().recordPurchase(laterPurchase);
+
+    final first = await service().applySupplierCredit(
+      allocationId: 'allocation-1',
+      purchaseId: laterPurchase.id,
+      supplierId: 'supplier-1',
+      amount: 1500000,
+    );
+    final second = await service().applySupplierCredit(
+      allocationId: 'allocation-1',
+      purchaseId: laterPurchase.id,
+      supplierId: 'supplier-1',
+      amount: 500000,
+    );
+
+    expect(second.id, first.id);
+    expect(await service().getSupplierCredit('supplier-1'), 500000);
+    expect((await creditAllocations.getAll()).length, 1);
+  });
+
+  test('supplier credit can be settled back as cash', () async {
+    await service().recordPurchase(purchase());
+    await service().recordSupplierPayment(
+      paymentId: 'payment-full',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 5000000,
+    );
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-credit',
+      quantities: {'raw_date_khesht': 4},
+    );
+
+    await service().settleSupplierCredit(
+      settlementId: 'settlement-1',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 1000000,
+    );
+
+    expect(await service().getSupplierCredit('supplier-1'), 1000000);
+    expect(await finance.getBalance('supplier-supplier-1'), 1000000);
+    expect(await finance.getBalance('cash'), 1000000);
+    expect((await creditSettlements.getAll()).single.amount, 1000000);
+  });
+
+  test('supplier credit settlement cannot exceed available credit', () async {
+    await service().recordPurchase(purchase());
+    await service().recordSupplierPayment(
+      paymentId: 'payment-full',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 5000000,
+    );
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-credit',
+      quantities: {'raw_date_khesht': 4},
+    );
+
+    expect(
+      () => service().settleSupplierCredit(
+        settlementId: 'settlement-over',
+        supplierId: 'supplier-1',
+        supplierName: 'تأمین‌کننده آزمایشی',
+        amount: 2000001,
       ),
       throwsA(isA<StateError>()),
     );
