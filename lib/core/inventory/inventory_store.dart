@@ -24,7 +24,20 @@ class InventoryStore {
   Future<void> addMovements(List<InventoryMovement> newMovements) async {
     if (newMovements.isEmpty) return;
 
+    final incomingIds = <String>{};
+    for (final movement in newMovements) {
+      if (!incomingIds.add(movement.id)) {
+        throw StateError('حرکت انبار تکراری در یک عملیات وجود دارد.');
+      }
+    }
+
     final movements = await getMovements();
+    final existingIds = movements.map((movement) => movement.id).toSet();
+    for (final movement in newMovements) {
+      if (existingIds.contains(movement.id)) {
+        throw StateError('حرکت انبار ${movement.id} قبلاً ثبت شده است.');
+      }
+    }
     final projected = <String, double>{};
 
     for (final movement in movements) {
@@ -124,12 +137,23 @@ class InventoryStore {
       );
     }
 
+    final reservations = await getReservations();
+    final existing = reservations.where((item) => item.id == reservation.id);
+    if (existing.isNotEmpty) {
+      final current = existing.first;
+      if (current.itemId != reservation.itemId ||
+          (current.quantity - reservation.quantity).abs() > 0.000001 ||
+          current.referenceId != reservation.referenceId) {
+        throw StateError('شناسه رزرو برای اطلاعات دیگری استفاده شده است.');
+      }
+      return;
+    }
+
     final available = await getAvailableStock(reservation.itemId);
     if (reservation.quantity > available + 0.000001) {
       throw StateError('موجودی آزاد برای رزرو کافی نیست.');
     }
 
-    final reservations = await getReservations();
     reservations.add(reservation);
 
     await LocalStore.instance.writeList(
