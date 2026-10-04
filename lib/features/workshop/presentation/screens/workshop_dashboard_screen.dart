@@ -8,7 +8,7 @@ class WorkshopDashboardScreen extends StatefulWidget {
   final ProductionBatchStore batchStore;
   final ProductionCostStore costStore;
 
-  const WorkshopDashboardScreen({
+  WorkshopDashboardScreen({
     super.key,
     this.batchStore = ProductionBatchStore.instance,
     this.costStore = ProductionCostStore.instance,
