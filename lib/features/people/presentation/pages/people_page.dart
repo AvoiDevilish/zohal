@@ -22,6 +22,7 @@ class _PeoplePageState extends State<PeoplePage> {
   List<Supplier> suppliers = [];
   int tab = 0;
   bool loading = true;
+  bool showInactive = false;
 
   @override
   void initState() {
@@ -35,8 +36,8 @@ class _PeoplePageState extends State<PeoplePage> {
     final supplierRows = await _supplierStore.getAll();
     if (!mounted) return;
     setState(() {
-      customers = customerRows.where((item) => item.isActive).toList();
-      suppliers = supplierRows.where((item) => item.isActive).toList();
+      customers = customerRows.where((item) => showInactive ? !item.isActive : item.isActive).toList();
+      suppliers = supplierRows.where((item) => showInactive ? !item.isActive : item.isActive).toList();
       loading = false;
     });
   }
@@ -93,6 +94,16 @@ class _PeoplePageState extends State<PeoplePage> {
     await load();
   }
 
+  Future<void> activateCustomer(Customer value) async {
+    await _customerStore.setActive(value.id, true);
+    await load();
+  }
+
+  Future<void> activateSupplier(Supplier value) async {
+    await _supplierStore.setActive(value.id, true);
+    await load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final people = tab == 0 ? customers : suppliers;
@@ -116,8 +127,11 @@ class _PeoplePageState extends State<PeoplePage> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: SegmentedButton<int>(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SegmentedButton<int>(
               segments: const [
                 ButtonSegment(value: 0, label: Text('مشتریان')),
                 ButtonSegment(value: 1, label: Text('تأمین‌کنندگان')),
@@ -126,6 +140,18 @@ class _PeoplePageState extends State<PeoplePage> {
               onSelectionChanged: (value) {
                 setState(() => tab = value.first);
               },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                FilterChip(
+                  label: const Text('غیرفعال'),
+                  selected: showInactive,
+                  onSelected: (value) {
+                    setState(() => showInactive = value);
+                    load();
+                  },
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -164,8 +190,10 @@ class _PeoplePageState extends State<PeoplePage> {
                                 phone: person.phone,
                                 notes: person.notes,
                                 onEdit: () => editCustomer(person),
-                                onDeactivate: () =>
-                                    deactivateCustomer(person),
+                                onDeactivate: showInactive
+                                    ? () => activateCustomer(person)
+                                    : () => deactivateCustomer(person),
+                                actionLabel: showInactive ? 'فعال کردن' : 'غیرفعال کردن',
                               );
                             }
 
@@ -175,8 +203,10 @@ class _PeoplePageState extends State<PeoplePage> {
                               phone: person.phone,
                               notes: person.notes,
                               onEdit: () => editSupplier(person),
-                              onDeactivate: () =>
-                                  deactivateSupplier(person),
+                              onDeactivate: showInactive
+                                  ? () => activateSupplier(person)
+                                  : () => deactivateSupplier(person),
+                              actionLabel: showInactive ? 'فعال کردن' : 'غیرفعال کردن',
                             );
                           },
                         ),
@@ -195,6 +225,7 @@ class _PersonCard extends StatelessWidget {
     required this.notes,
     required this.onEdit,
     required this.onDeactivate,
+    required this.actionLabel,
   });
 
   final String name;
@@ -202,6 +233,7 @@ class _PersonCard extends StatelessWidget {
   final String? notes;
   final VoidCallback onEdit;
   final VoidCallback onDeactivate;
+  final String actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -230,7 +262,7 @@ class _PersonCard extends StatelessWidget {
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'edit', child: Text('ویرایش')),
-              PopupMenuItem(value: 'deactivate', child: Text('غیرفعال کردن')),
+              PopupMenuItem(value: 'deactivate', child: Text(actionLabel)),
             ],
           ),
         ),
