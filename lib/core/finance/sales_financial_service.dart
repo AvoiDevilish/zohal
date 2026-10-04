@@ -2,6 +2,7 @@ import 'financial_account.dart';
 import 'financial_entry.dart';
 import 'financial_store.dart';
 import '../sales/sales_delivery.dart';
+import '../sales/sales_return.dart';
 
 class SalesFinancialService {
   final FinancialStore store;
@@ -46,6 +47,51 @@ class SalesFinancialService {
           amount: delivery.totalAmount,
           isDebit: false,
           note: 'درآمد فروش',
+        ),
+      ],
+    );
+    await store.addTransaction(transaction);
+    return transaction;
+  }
+
+  Future<FinancialTransaction> postSaleReturn(
+    SalesReturn salesReturn, {
+    required String customerName,
+  }) async {
+    final transactionId = 'sale-return-' + salesReturn.id;
+    final existing = await store.getTransaction(transactionId);
+    if (existing != null) return existing;
+
+    final customerAccountId = 'customer-' + salesReturn.customerId;
+    await store.ensureAccount(FinancialAccount(
+      id: customerAccountId,
+      name: customerName,
+      type: FinancialAccountType.customer,
+    ));
+    await store.ensureAccount(const FinancialAccount(
+      id: 'sales-revenue',
+      name: 'فروش',
+      type: FinancialAccountType.salesRevenue,
+    ));
+
+    final transaction = FinancialTransaction(
+      id: transactionId,
+      createdAt: salesReturn.createdAt,
+      type: 'saleReturn',
+      referenceId: salesReturn.id,
+      note: 'برگشت فروش ' + salesReturn.id,
+      entries: [
+        FinancialEntry(
+          accountId: 'sales-revenue',
+          amount: salesReturn.totalAmount,
+          isDebit: true,
+          note: 'کاهش درآمد فروش بابت برگشت',
+        ),
+        FinancialEntry(
+          accountId: customerAccountId,
+          amount: salesReturn.totalAmount,
+          isDebit: false,
+          note: 'ثبت اعتبار مشتری بابت برگشت',
         ),
       ],
     );
