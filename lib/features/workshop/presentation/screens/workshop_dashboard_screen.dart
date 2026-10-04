@@ -5,6 +5,7 @@ import 'package:zohal_android_test/core/workshop/production_batch.dart';
 import 'package:zohal_android_test/core/workshop/production_batch_store.dart';
 import 'package:zohal_android_test/core/inventory/inventory_store.dart';
 import 'package:zohal_android_test/core/workshop/production_order_analyzer.dart';
+import 'package:zohal_android_test/core/workshop/production_order_execution_service.dart';
 import 'package:zohal_android_test/core/sales/sales_order.dart';
 import 'package:zohal_android_test/core/sales/sales_order_store.dart';
 
@@ -70,17 +71,19 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
         inventoryStore: InventoryStore.instance,
       ).analyze(order);
 
-      await _orderStore.update(SalesOrder(
-        id: order.id,
-        customerId: order.customerId,
-        customerName: order.customerName,
-        orderDate: order.orderDate,
-        lines: order.lines,
-        totalAmount: order.totalAmount,
-        status: analysis.canProduce
-            ? SalesOrderStatus.readyForProduction
-            : SalesOrderStatus.shortage,
-      ));
+      await _orderStore.update(
+        SalesOrder(
+          id: order.id,
+          customerId: order.customerId,
+          customerName: order.customerName,
+          orderDate: order.orderDate,
+          lines: order.lines,
+          totalAmount: order.totalAmount,
+          status: analysis.canProduce
+              ? SalesOrderStatus.readyForProduction
+              : SalesOrderStatus.shortage,
+        ),
+      );
 
       if (!mounted) return;
 
@@ -103,7 +106,7 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
                     title: Text(item.materialName),
                     subtitle: Text(
                       'نیاز: ${item.requiredQuantity.toStringAsFixed(2)} ${item.unit} '
-                      '• موجود: ${item.availableQuantity.toStringAsFixed(2)} ${item.unit}',
+                      '• موجود آزاد: ${item.availableQuantity.toStringAsFixed(2)} ${item.unit}',
                     ),
                     trailing: item.isSufficient
                         ? const Icon(Icons.check_circle_outline)
@@ -143,6 +146,60 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('تحلیل سفارش انجام نشد: $error')),
+      );
+    }
+  }
+
+  Future<void> _reserveOrder(SalesOrder order) async {
+    try {
+      final analysis = await ProductionOrderAnalyzer(
+        inventoryStore: InventoryStore.instance,
+      ).analyze(order);
+
+      await ProductionOrderExecutionService(
+        inventoryStore: InventoryStore.instance,
+        orderStore: _orderStore,
+        batchStore: widget.batchStore,
+      ).reserve(order, analysis);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('مواد اولیه سفارش رزرو شد.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('رزرو مواد انجام نشد: $error')),
+      );
+    }
+  }
+
+  Future<void> _startProduction(SalesOrder order) async {
+    try {
+      final analysis = await ProductionOrderAnalyzer(
+        inventoryStore: InventoryStore.instance,
+      ).analyze(order);
+
+      final result = await ProductionOrderExecutionService(
+        inventoryStore: InventoryStore.instance,
+        orderStore: _orderStore,
+        batchStore: widget.batchStore,
+      ).startProduction(order, analysis);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.alreadyCompleted
+                ? 'این سفارش قبلاً تولید شده است.'
+                : 'تولید سفارش تکمیل شد.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تولید سفارش انجام نشد: $error')),
       );
     }
   }
