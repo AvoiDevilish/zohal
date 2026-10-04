@@ -135,6 +135,48 @@ void main() {
       expect(await store.getReservedStock('material-date'), 4);
     });
 
+    test('reserves a group atomically when one reservation is impossible', () async {
+      final store = InventoryStore.instance;
+
+      await store.addMovement(
+        InventoryMovement(
+          id: 'movement-atomic-reservation-stock',
+          itemId: 'material-date',
+          itemName: 'خرما',
+          itemType: 'raw_material',
+          quantity: 10,
+          unit: 'kg',
+          movementType: InventoryMovementType.purchase,
+          timestamp: DateTime(2026, 9, 17),
+        ),
+      );
+
+      final reservations = [
+        InventoryReservation(
+          id: 'reservation-atomic-1',
+          itemId: 'material-date',
+          quantity: 4,
+          referenceId: 'order-atomic',
+          createdAt: DateTime(2026, 9, 17),
+        ),
+        InventoryReservation(
+          id: 'reservation-atomic-2',
+          itemId: 'material-date',
+          quantity: 7,
+          referenceId: 'order-atomic',
+          createdAt: DateTime(2026, 9, 17),
+        ),
+      ];
+
+      await expectLater(
+        store.reserveAll(reservations),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(await store.getReservedStock('material-date'), 0);
+      expect(await store.getReservations(), isEmpty);
+    });
+
     test('rejects reusing a reservation id for different data', () async {
       final store = InventoryStore.instance;
       await store.addMovement(
