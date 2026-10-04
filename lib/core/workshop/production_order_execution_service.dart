@@ -120,6 +120,15 @@ class ProductionOrderExecutionService {
         order.status == SalesOrderStatus.readyForDelivery ||
         order.status == SalesOrderStatus.partiallyDelivered ||
         order.status == SalesOrderStatus.delivered) {
+      final activeReservations = await inventoryStore.getReservations(
+        activeOnly: true,
+      );
+      for (final reservation in activeReservations.where(
+        (item) => item.referenceId == order.id,
+      )) {
+        await inventoryStore.releaseReservation(reservation.id);
+      }
+
       return ProductionOrderExecutionResult(
         orderId: order.id,
         changed: false,
@@ -231,16 +240,16 @@ class ProductionOrderExecutionService {
 
     await _ensureBatches(order, analysis);
 
-    for (final reservation in orderReservations) {
-      await inventoryStore.releaseReservation(reservation.id);
-    }
-
     final updatedOrder = _withStatus(
       order,
       SalesOrderStatus.productionCompleted,
     );
 
     await orderStore.update(updatedOrder);
+
+    for (final reservation in orderReservations) {
+      await inventoryStore.releaseReservation(reservation.id);
+    }
 
     return ProductionOrderExecutionResult(
       orderId: order.id,
