@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
+
 import '../storage/local_store.dart';
 import 'sales_order.dart';
 
-class SalesOrderStore {
+class SalesOrderStore extends ChangeNotifier {
   SalesOrderStore._();
 
   static final SalesOrderStore instance = SalesOrderStore._();
@@ -25,6 +27,7 @@ class SalesOrderStore {
       _storageKey,
       orders.map((item) => item.toMap()).toList(),
     );
+    notifyListeners();
   }
 
   Future<void> update(SalesOrder order) async {
@@ -39,9 +42,11 @@ class SalesOrderStore {
       _storageKey,
       orders.map((item) => item.toMap()).toList(),
     );
+    notifyListeners();
   }
 
   Future<void> clear() async {
     await LocalStore.instance.remove(_storageKey);
+    notifyListeners();
   }
 }
