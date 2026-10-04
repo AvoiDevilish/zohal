@@ -22,14 +22,11 @@ class WorkshopDashboardScreen extends StatefulWidget {
 }
 
 class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
-  late Future<_WorkshopDashboardData> _future;
   final SalesOrderStore _orderStore = SalesOrderStore.instance;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
-    _orderStore.addListener(_refresh);
   }
 
   Future<_WorkshopDashboardData> _load() async {
@@ -66,14 +63,7 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
   }
 
   void _refresh() {
-    if (!mounted) return;
-    setState(() => _future = _load());
-  }
-
-  @override
-  void dispose() {
-    _orderStore.removeListener(_refresh);
-    super.dispose();
+    if (mounted) setState(() {});
   }
 
   @override
@@ -84,97 +74,103 @@ class _WorkshopDashboardScreenState extends State<WorkshopDashboardScreen> {
         actions: [
           IconButton(
             key: const Key('workshop_refresh'),
-            onPressed: _refresh,
+            onPressed: () => setState(() {}),
             tooltip: 'به‌روزرسانی',
             icon: const Icon(Icons.refresh),
           ),
         ],
       ),
-      body: FutureBuilder<_WorkshopDashboardData>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: FilledButton(
-                onPressed: _refresh,
-                child: const Text('تلاش دوباره'),
-              ),
-            );
-          }
+      body: ListenableBuilder(
+        listenable: _orderStore,
+        builder: (context, _) => FutureBuilder<_WorkshopDashboardData>(
+          future: _load(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: FilledButton(
+                  onPressed: () => setState(() {}),
+                  child: const Text('تلاش دوباره'),
+                ),
+              );
+            }
 
-          final data = snapshot.data!;
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _IncomingOrders(
-                orders: data.incomingOrders,
-                onAnalyze: (order) async {
-                  await _orderStore.update(SalesOrder(
-                    id: order.id,
-                    customerId: order.customerId,
-                    customerName: order.customerName,
-                    orderDate: order.orderDate,
-                    lines: order.lines,
-                    totalAmount: order.totalAmount,
-                    status: SalesOrderStatus.workshopAnalyzing,
-                  ));
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('سفارش وارد مرحله تحلیل کارگاه شد.')),
-                  );
-                  _refresh();
-                },
-              ),
-              const SizedBox(height: 16),
-              _Section(
-                title: 'وضعیت تولید',
-                children: [
-                  _Metric('تولید فعال', data.active.toString(), Icons.precision_manufacturing_outlined),
-                  _Metric('تکمیل شده امروز', data.completedToday.toString(), Icons.task_alt),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _Section(
-                title: 'هزینه تولید',
-                children: [
-                  _Metric('هزینه کل', data.totalCost.toStringAsFixed(2), Icons.account_balance_wallet_outlined),
-                  _Metric('هزینه واحد', data.unitCost.toStringAsFixed(2), Icons.price_check_outlined),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('آخرین تولیدها',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      if (data.recent.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Text('هنوز تولیدی ثبت نشده است.'),
-                        )
-                      else
-                        ...data.recent.map((batch) => ListTile(
+            final data = snapshot.data!;
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _IncomingOrders(
+                  orders: data.incomingOrders,
+                  onAnalyze: (order) async {
+                    await _orderStore.update(SalesOrder(
+                      id: order.id,
+                      customerId: order.customerId,
+                      customerName: order.customerName,
+                      orderDate: order.orderDate,
+                      lines: order.lines,
+                      totalAmount: order.totalAmount,
+                      status: SalesOrderStatus.workshopAnalyzing,
+                    ));
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('سفارش وارد مرحله تحلیل کارگاه شد.')),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                _Section(
+                  title: 'وضعیت تولید',
+                  children: [
+                    _Metric('تولید فعال', data.active.toString(), Icons.precision_manufacturing_outlined),
+                    _Metric('تکمیل شده امروز', data.completedToday.toString(), Icons.task_alt),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _Section(
+                  title: 'هزینه تولید',
+                  children: [
+                    _Metric('هزینه کل', data.totalCost.toStringAsFixed(2), Icons.account_balance_wallet_outlined),
+                    _Metric('هزینه واحد', data.unitCost.toStringAsFixed(2), Icons.price_check_outlined),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'آخرین تولیدها',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        if (data.recent.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Text('هنوز تولیدی ثبت نشده است.'),
+                          )
+                        else
+                          ...data.recent.map(
+                            (batch) => ListTile(
                               contentPadding: EdgeInsets.zero,
                               title: Text(batch.productName),
                               subtitle: Text(
                                 batch.status.title + ' • ' + batch.units.toString() + ' واحد',
                               ),
                               trailing: Text(batch.unitWeightGrams.toString() + ' گرم'),
-                            )),
-                    ],
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
