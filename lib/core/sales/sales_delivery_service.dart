@@ -4,6 +4,7 @@ import 'sales_delivery.dart';
 import 'sales_delivery_store.dart';
 import 'sales_order.dart';
 import 'sales_order_store.dart';
+import '../finance/sales_financial_service.dart';
 
 class SalesDeliveryResult {
   const SalesDeliveryResult({
@@ -21,11 +22,13 @@ class SalesDeliveryService {
   final InventoryStore inventoryStore;
   final SalesOrderStore orderStore;
   final SalesDeliveryStore deliveryStore;
+  final SalesFinancialService financialService;
 
   const SalesDeliveryService({
     required this.inventoryStore,
     required this.orderStore,
     required this.deliveryStore,
+    required this.financialService,
   });
 
   Future<SalesOrder> markReadyForDelivery(SalesOrder order) async {
@@ -135,6 +138,10 @@ class SalesDeliveryService {
       totalAmount: totalAmount,
     );
     await deliveryStore.add(delivery);
+    await financialService.postSaleReceivable(
+      delivery,
+      customerName: order.customerName,
+    );
 
     final nextDelivered = Map<String, int>.from(delivered);
     for (final entry in requested.entries) {
