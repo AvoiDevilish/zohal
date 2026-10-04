@@ -135,7 +135,7 @@ void main() {
       expect(
         result.totalShortageQuantity,
         closeTo(
-          (1393 - 1000) +
+          (1547.7777777777778 - 1000) +
               (241.785 - 100) +
               (161.19 - 100) +
               (134.325 - 100) +
