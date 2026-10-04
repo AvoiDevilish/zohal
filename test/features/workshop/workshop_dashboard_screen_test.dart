@@ -68,6 +68,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('هنوز تولیدی ثبت نشده است.'), findsOneWidget);
-    expect(find.text('0'), findsNWidgets(4));
+    expect(find.text('0'), findsNWidgets(2));
+    expect(find.text('0.00'), findsNWidgets(2));
   });
 }
