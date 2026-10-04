@@ -14,21 +14,6 @@ class ZohalApp extends StatelessWidget {
   const ZohalApp({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    _migratePeople();
-  }
-
-  Future<void> _migratePeople() async {
-    await PersonMigrationService(
-      personStore: PersonStore.instance,
-      customerStore: CustomerStore.instance,
-      supplierStore: SupplierStore.instance,
-      financialStore: FinancialStore.instance,
-    ).migrateLegacyPeople();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -49,6 +34,21 @@ class ZohalHomePage extends StatefulWidget {
 
 class _ZohalHomePageState extends State<ZohalHomePage> {
   int _currentIndex = 2;
+
+  @override
+  void initState() {
+    super.initState();
+    _migratePeople();
+  }
+
+  Future<void> _migratePeople() async {
+    await PersonMigrationService(
+      personStore: PersonStore.instance,
+      customerStore: CustomerStore.instance,
+      supplierStore: SupplierStore.instance,
+      financialStore: FinancialStore.instance,
+    ).migrateLegacyPeople();
+  }
 
   final List<Widget> _pages = [
     InventoryPage(),
