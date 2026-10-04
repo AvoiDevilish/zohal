@@ -114,6 +114,28 @@ void main() {
     expect(await finance.getBalance('cash'), -2000000);
   });
 
+  test('supplier payment is idempotent', () async {
+    await service().recordPurchase(purchase());
+
+    final first = await service().recordSupplierPayment(
+      paymentId: 'payment-1',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 2000000,
+    );
+    final second = await service().recordSupplierPayment(
+      paymentId: 'payment-1',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 500000,
+    );
+
+    expect(second.id, first.id);
+    expect(await finance.getBalance('supplier-supplier-1'), -3000000);
+    expect(await finance.getBalance('cash'), -2000000);
+    expect((await finance.getTransactions()).length, 2);
+  });
+
   test('supplier payment cannot exceed payable', () async {
     await service().recordPurchase(purchase());
 
@@ -126,6 +148,21 @@ void main() {
       ),
       throwsA(isA<StateError>()),
     );
+  });
+
+  test('purchase return cannot exceed purchased quantity', () async {
+    await service().recordPurchase(purchase());
+
+    expect(
+      () => service().returnPurchase(
+        purchase: purchase(),
+        returnId: 'return-over',
+        quantities: {'raw_date_khesht': 11},
+      ),
+      throwsA(isA<StateError>()),
+    );
+    expect(await inventory.getStock('raw_date_khesht'), 10);
+    expect(await purchaseReturns.getAll(), isEmpty);
   });
 
   test('supplier payment without payable is rejected', () async {
