@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/design/app_spacing.dart';
+import '../../../../core/inventory/inventory_item_store.dart';
 import '../../../../core/inventory/inventory_movement.dart';
 import '../../../../core/inventory/inventory_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
@@ -15,6 +16,7 @@ class InventoryPage extends StatefulWidget {
 
 class _InventoryPageState extends State<InventoryPage> {
   final InventoryStore _store = InventoryStore.instance;
+  final InventoryItemStore _itemStore = InventoryItemStore.instance;
 
   Map<String, double> _stocks = {};
   Map<String, double> _reservedStocks = {};
@@ -31,6 +33,8 @@ class _InventoryPageState extends State<InventoryPage> {
     setState(() {
       _loading = true;
     });
+
+    await _itemStore.ensureSeeded();
 
     final stocks = await _store.getAllStocks();
     final movements = await _store.getMovements();
