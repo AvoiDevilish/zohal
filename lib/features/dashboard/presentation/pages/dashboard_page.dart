@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/design/app_spacing.dart';
-import '../../../../core/sales/sales_order.dart';
+import '../../../../core/sales/customer_store.dart';
+import '../../../../core/sales/supplier_store.dart';
 import '../../../../core/sales/sales_order_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
 import '../../../people/presentation/pages/people_page.dart';
+import '../../../products/presentation/pages/products_page.dart';
 import '../../../sales/presentation/pages/sales_order_page.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -18,6 +20,8 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   final _orders = SalesOrderStore.instance;
   int orderCount = 0;
+  int customerCount = 0;
+  int supplierCount = 0;
 
   @override
   void initState() {
@@ -27,8 +31,14 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> load() async {
     final rows = await _orders.getAll();
+    final customers = await CustomerStore.instance.getAll();
+    final suppliers = await SupplierStore.instance.getAll();
     if (!mounted) return;
-    setState(() => orderCount = rows.length);
+    setState(() {
+      orderCount = rows.length;
+      customerCount = customers.where((item) => item.isActive).length;
+      supplierCount = suppliers.where((item) => item.isActive).length;
+    });
   }
 
   Future<void> openOrders() async {
@@ -39,9 +49,12 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> openPeople() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const PeoplePage()),
-    );
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PeoplePage()));
+    await load();
+  }
+
+  Future<void> openProducts() async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ProductsPage()));
   }
 
   @override
@@ -108,13 +121,20 @@ class _DashboardPageState extends State<DashboardPage> {
             onTap: openPeople,
             child: Row(
               children: [
-                Expanded(child: _PersonMetric(title: 'مشتریان', value: '—')),
+                Expanded(child: _PersonMetric(title: 'مشتریان', value: customerCount.toString())),
                 const VerticalDivider(width: 1),
                 Expanded(
-                  child: _PersonMetric(title: 'تأمین‌کنندگان', value: '—'),
+                  child: _PersonMetric(title: 'تأمین‌کنندگان', value: supplierCount.toString()),
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+          _DashboardCard(
+            icon: Icons.sell_outlined,
+            title: 'محصولات',
+            onTap: openProducts,
+            child: const _MetricRow(label: 'محصولات فعال', value: '۱۲'),
           ),
           const SizedBox(height: 12),
           _DashboardCard(
