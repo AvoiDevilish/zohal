@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zohal_android_test/core/finance/financial_account.dart';
+import 'package:zohal_android_test/core/finance/financial_entry.dart';
 import 'package:zohal_android_test/core/finance/financial_store.dart';
+import 'package:zohal_android_test/core/inventory/inventory_movement.dart';
 import 'package:zohal_android_test/core/inventory/inventory_store.dart';
 import 'package:zohal_android_test/core/purchase.dart';
 import 'package:zohal_android_test/core/purchase_service.dart';
