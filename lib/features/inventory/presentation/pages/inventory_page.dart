@@ -17,6 +17,7 @@ class _InventoryPageState extends State<InventoryPage> {
   final InventoryStore _store = InventoryStore.instance;
 
   Map<String, double> _stocks = {};
+  Map<String, double> _reservedStocks = {};
   List<InventoryMovement> _movements = [];
   bool _loading = true;
 
@@ -33,19 +34,23 @@ class _InventoryPageState extends State<InventoryPage> {
 
     final stocks = await _store.getAllStocks();
     final movements = await _store.getMovements();
+    final reservedStocks = <String, double>{};
+    for (final itemId in stocks.keys) {
+      final reserved = await _store.getReservedStock(itemId);
+      if (reserved > 0) reservedStocks[itemId] = reserved;
+    }
 
     if (!mounted) return;
 
     setState(() {
       _stocks = stocks;
+      _reservedStocks = reservedStocks;
       _movements = movements;
       _loading = false;
     });
   }
 
-  double get _totalStock {
-    return _stocks.values.fold<double>(0, (total, value) => total + value);
-  }
+  int get _reservedItemCount => _reservedStocks.keys.length;
 
   Future<void> _openAddMovement() async {
     final result = await showDialog<InventoryMovement>(
@@ -153,17 +158,14 @@ class _InventoryPageState extends State<InventoryPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.stacked_bar_chart_outlined,
-                  color: AppColors.yellow,
-                ),
+                const Icon(Icons.bookmark_border, color: AppColors.yellow),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  _formatNumber(_totalStock),
+                  _reservedItemCount.toString(),
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                const Text('مجموع واحدها'),
+                const Text('قلم رزروشده'),
               ],
             ),
           ),
@@ -227,6 +229,18 @@ class _InventoryPageState extends State<InventoryPage> {
                       Text(
                         movement.unit,
                         style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'آزاد: ' +
+                            _formatNumber(
+                              entry.value - (_reservedStocks[entry.key] ?? 0),
+                            ) +
+                            '  •  رزرو: ' +
+                            _formatNumber(_reservedStocks[entry.key] ?? 0),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
