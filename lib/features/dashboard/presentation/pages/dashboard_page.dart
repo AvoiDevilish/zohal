@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/design/app_colors.dart';
 import '../../../../core/sales/customer_store.dart';
 import '../../../../core/sales/supplier_store.dart';
 import '../../../../core/sales/sales_order_store.dart';
