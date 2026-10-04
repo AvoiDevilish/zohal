@@ -26,7 +26,7 @@ class PersonMigrationService {
       final person = Person(
         id: customer.id,
         name: customer.name,
-        roles: {...?current?.roles, PersonRole.customer},
+        roles: {...(current?.roles ?? const <PersonRole>{}), PersonRole.customer},
         phone: customer.phone,
         notes: customer.notes,
         isActive: customer.isActive,
@@ -45,7 +45,7 @@ class PersonMigrationService {
       final person = Person(
         id: supplier.id,
         name: supplier.name,
-        roles: {...?current?.roles, PersonRole.supplier},
+        roles: {...(current?.roles ?? const <PersonRole>{}), PersonRole.supplier},
         phone: supplier.phone,
         notes: supplier.notes,
         isActive: supplier.isActive,
