@@ -161,10 +161,12 @@ class SalesFinancialService {
 
     final effectivePayerId = payerId ?? customerId;
     final effectivePayerName = payerName ?? customerName;
-    final payer = await CustomerStore.instance.getAll();
-    final payerMatch = payer.where((item) => item.id == effectivePayerId);
-    if (payerMatch.isEmpty) {
-      throw StateError('پرداخت‌کننده باید قبلاً به عنوان مشتری ثبت شده باشد.');
+    if (effectivePayerId != customerId) {
+      final payer = await CustomerStore.instance.getAll();
+      final payerMatch = payer.where((item) => item.id == effectivePayerId);
+      if (payerMatch.isEmpty) {
+        throw StateError('پرداخت‌کننده باید قبلاً به عنوان مشتری ثبت شده باشد.');
+      }
     }
 
     await store.ensureAccount(FinancialAccount(
