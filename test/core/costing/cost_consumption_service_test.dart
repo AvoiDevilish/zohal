@@ -42,6 +42,8 @@ void main() {
           unitCost: 12,
           createdAt: DateTime(2026, 1, 1),
           purchaseId: 'purchase-1',
+          lotNumber: 'LOT-DATE-001',
+          expiryDate: DateTime(2026, 12, 31),
         ),
       );
 
@@ -76,6 +78,8 @@ void main() {
       expect(result.allocations[0].quantity, 10000);
       expect(result.allocations[0].unitCost, 12);
       expect(result.allocations[0].totalCost, 120000);
+      expect(result.allocations[0].sourceLotNumber, 'LOT-DATE-001');
+      expect(result.allocations[0].sourceExpiryDate, DateTime(2026, 12, 31));
 
       expect(result.allocations[1].costLayerId, 'layer-2');
       expect(result.allocations[1].quantity, 2000);
