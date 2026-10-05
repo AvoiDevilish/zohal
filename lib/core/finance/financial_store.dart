@@ -50,16 +50,40 @@ class FinancialStore {
   }
 
   Future<void> addTransaction(FinancialTransaction transaction) async {
-    if (!transaction.isBalanced) throw StateError('سند مالی باید تراز باشد.');
-    if (transaction.entries.isEmpty || transaction.entries.any((e) => e.amount <= 0)) {
+    if (transaction.id.trim().isEmpty ||
+        transaction.type.trim().isEmpty ||
+        transaction.referenceId.trim().isEmpty) {
+      throw StateError('سند مالی شناسه و مرجع معتبر ندارد.');
+    }
+    if (!transaction.isBalanced) {
+      throw StateError('سند مالی باید تراز باشد.');
+    }
+    if (transaction.entries.isEmpty ||
+        transaction.entries.any(
+          (entry) => entry.accountId.trim().isEmpty || entry.amount <= 0,
+        )) {
       throw StateError('سند مالی معتبر نیست.');
     }
+
+    final accountIds = <String>{};
+    for (final entry in transaction.entries) {
+      if (!accountIds.add(entry.accountId)) {
+        throw StateError('در یک سند مالی حساب تکراری مجاز نیست: ' + entry.accountId);
+      }
+      if (await getAccount(entry.accountId) == null) {
+        throw StateError('حساب مالی برای سند پیدا نشد: ' + entry.accountId);
+      }
+    }
+
     if (await getTransaction(transaction.id) != null) {
       throw StateError('سند مالی تکراری است.');
     }
     final transactions = await getTransactions();
     transactions.add(transaction);
-    await LocalStore.instance.writeList(_transactionKey, transactions.map((t) => t.toMap()).toList());
+    await LocalStore.instance.writeList(
+      _transactionKey,
+      transactions.map((t) => t.toMap()).toList(),
+    );
   }
 
   Future<int> getBalance(String accountId) async {
