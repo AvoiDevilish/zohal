@@ -9,6 +9,7 @@ import '../../../../core/sales/sales_order_store.dart';
 import '../../../../core/sales/supplier_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
 import '../../../inventory/presentation/pages/inventory_page.dart';
+import '../../../operations/presentation/pages/operations_page.dart';
 import '../../../people/presentation/pages/people_page.dart';
 import '../../../products/presentation/pages/products_page.dart';
 import '../../../sales/presentation/pages/sales_order_page.dart';
@@ -85,6 +86,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _openOrders() => _open(const SalesOrderPage());
   Future<void> _openInventory() => _open(const InventoryPage());
   Future<void> _openWorkshop() => _open(WorkshopDashboardScreen());
+  Future<void> _openOperations() => _open(const OperationsPage());
 
   @override
   Widget build(BuildContext context) {
@@ -317,6 +319,12 @@ class _DashboardPageState extends State<DashboardPage> {
           title: 'کارگاه',
           subtitle: '$pendingWorkshop مورد در جریان',
           onTap: _openWorkshop,
+        ),
+        _QuickAction(
+          icon: Icons.account_balance_wallet_outlined,
+          title: 'عملیات',
+          subtitle: 'خرید • تحویل • برگشت • مالی',
+          onTap: _openOperations,
         ),
       ],
     );
