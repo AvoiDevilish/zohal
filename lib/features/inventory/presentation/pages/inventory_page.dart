@@ -71,6 +71,30 @@ class _InventoryPageState extends State<InventoryPage> {
     await _loadInventory();
   }
 
+  Future<void> _editNutrition(InventoryItem item) async {
+    final nutrition = await showDialog<NutritionProfile>(
+      context: context,
+      builder: (_) => _InventoryNutritionDialog(existing: item.nutrition),
+    );
+    if (nutrition == null) return;
+    await _itemStore.upsert(
+      InventoryItem(
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        unit: item.unit,
+        minimumStock: item.minimumStock,
+        category: item.category,
+        englishName: item.englishName,
+        isFood: true,
+        unitConversions: item.unitConversions,
+        nutrition: nutrition,
+        notes: item.notes,
+      ),
+    );
+    await _loadInventory();
+  }
+
   Future<void> _openAddMovement() async {
     final result = await showDialog<InventoryMovement>(
       context: context,
@@ -265,6 +289,11 @@ class _InventoryPageState extends State<InventoryPage> {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  tooltip: 'ارزش غذایی',
+                  onPressed: () => _editNutrition(item),
+                  icon: const Icon(Icons.restaurant_menu_outlined),
                 ),
               ],
             ),
@@ -497,6 +526,99 @@ class _AddMovementDialogState extends State<_AddMovementDialog> {
     actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
       FilledButton(onPressed: submit, child: const Text('ثبت')),
+    ],
+  );
+}
+
+class _InventoryNutritionDialog extends StatefulWidget {
+  const _InventoryNutritionDialog({this.existing});
+  final NutritionProfile? existing;
+
+  @override
+  State<_InventoryNutritionDialog> createState() => _InventoryNutritionDialogState();
+}
+
+class _InventoryNutritionDialogState extends State<_InventoryNutritionDialog> {
+  final formKey = GlobalKey<FormState>();
+  late final Map<String, TextEditingController> fields;
+
+  static const labels = {
+    'energy': 'انرژی (kcal)',
+    'protein': 'پروتئین (g)',
+    'fat': 'چربی کل (g)',
+    'saturated': 'چربی اشباع (g)',
+    'carbs': 'کربوهیدرات (g)',
+    'sugar': 'قند کل (g)',
+    'fiber': 'فیبر (g)',
+    'sodium': 'سدیم (mg)',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    final n = widget.existing;
+    fields = {
+      'energy': TextEditingController(text: n?.energyKcal.toString() ?? ''),
+      'protein': TextEditingController(text: n?.proteinG.toString() ?? ''),
+      'fat': TextEditingController(text: n?.totalFatG.toString() ?? ''),
+      'saturated': TextEditingController(text: n?.saturatedFatG.toString() ?? ''),
+      'carbs': TextEditingController(text: n?.carbohydrateG.toString() ?? ''),
+      'sugar': TextEditingController(text: n?.totalSugarG.toString() ?? ''),
+      'fiber': TextEditingController(text: n?.fiberG.toString() ?? ''),
+      'sodium': TextEditingController(text: n?.sodiumMg.toString() ?? ''),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final controller in fields.values) controller.dispose();
+    super.dispose();
+  }
+
+  void save() {
+    if (!formKey.currentState!.validate()) return;
+    final values = fields.values.map((c) => double.parse(c.text.replaceAll(',', '.'))).toList();
+    Navigator.pop(
+      context,
+      NutritionProfile(
+        energyKcal: values[0],
+        proteinG: values[1],
+        totalFatG: values[2],
+        saturatedFatG: values[3],
+        carbohydrateG: values[4],
+        totalSugarG: values[5],
+        fiberG: values[6],
+        sodiumMg: values[7],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('ارزش غذایی'),
+    content: Form(
+      key: formKey,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: labels.entries.map((entry) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TextFormField(
+              controller: fields[entry.key],
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(labelText: entry.value),
+              validator: (value) {
+                final n = double.tryParse(value?.replaceAll(',', '.') ?? '');
+                return n == null || n < 0 ? 'مقدار معتبر وارد کنید' : null;
+              },
+            ),
+          )).toList(),
+        ),
+      ),
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
+      FilledButton(onPressed: save, child: const Text('ذخیره')),
     ],
   );
 }
