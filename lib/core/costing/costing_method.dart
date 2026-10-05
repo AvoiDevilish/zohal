@@ -1,10 +1,12 @@
-enum CostingMethod { fifo, weightedAverage }
+enum CostingMethod { fifo, fefo, weightedAverage }
 
 extension CostingMethodX on CostingMethod {
   String get key {
     switch (this) {
       case CostingMethod.fifo:
         return 'fifo';
+      case CostingMethod.fefo:
+        return 'fefo';
       case CostingMethod.weightedAverage:
         return 'weightedAverage';
     }
@@ -14,6 +16,8 @@ extension CostingMethodX on CostingMethod {
     switch (this) {
       case CostingMethod.fifo:
         return 'اولین خرید، اولین مصرف';
+      case CostingMethod.fefo:
+        return 'اولین انقضا، اولین مصرف';
       case CostingMethod.weightedAverage:
         return 'میانگین موزون';
     }
