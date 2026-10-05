@@ -170,6 +170,8 @@ class SalesReturnService {
     );
 
     return SalesReturnResult(salesReturn: salesReturn, changed: true);
+  }
+
   bool _sameReturnRequest(SalesReturn existing, Map<String, int> quantities) {
     if (existing.lines.length != quantities.length) return false;
     for (final entry in quantities.entries) {
