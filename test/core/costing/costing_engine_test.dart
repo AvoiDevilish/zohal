@@ -169,41 +169,6 @@ void main() {
   test('FEFO rejects expired lots by default', () {
     final now = DateTime(2026, 7, 1);
 
-    expect(
-      () => engine.calculate(
-        layers: [
-          CostLayer(
-            id: 'expired',
-            materialId: 'date',
-            materialName: 'خرما',
-            quantity: 5000,
-            remainingQuantity: 5000,
-            unit: 'گرم',
-            unitCost: 100,
-            createdAt: DateTime(2026, 1, 1),
-            lotNumber: 'LOT-EXPIRED',
-            expiryDate: DateTime(2026, 6, 30),
-          ),
-          CostLayer(
-            id: 'valid',
-            materialId: 'date',
-            materialName: 'خرما',
-            quantity: 5000,
-            remainingQuantity: 5000,
-            unit: 'گرم',
-            unitCost: 160,
-            createdAt: DateTime(2026, 1, 2),
-            lotNumber: 'LOT-VALID',
-            expiryDate: DateTime(2026, 12, 31),
-          ),
-        ],
-        quantity: 3000,
-        method: CostingMethod.fefo,
-        now: now,
-      ),
-      isNot(throwsA(anything)),
-    );
-
     final result = engine.calculate(
       layers: [
         CostLayer(
