@@ -10,6 +10,7 @@ import 'package:zohal_android_test/core/purchase.dart';
 import 'package:zohal_android_test/core/purchase_service.dart';
 import 'package:zohal_android_test/core/purchase_store.dart';
 import 'package:zohal_android_test/core/purchase_return_store.dart';
+import 'package:zohal_android_test/core/purchase/supplier_credit_allocation.dart';
 import 'package:zohal_android_test/core/purchase/supplier_credit_allocation_store.dart';
 import 'package:zohal_android_test/core/purchase/supplier_credit_entry_store.dart';
 import 'package:zohal_android_test/core/purchase/supplier_credit_settlement_store.dart';
