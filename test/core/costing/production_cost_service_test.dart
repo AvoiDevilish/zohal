@@ -142,6 +142,7 @@ void main() {
         ],
       ),
       method: CostingMethod.fefo,
+      now: DateTime(2026, 1, 1),
     );
 
     expect(result.materialCost, 15000);
