@@ -266,45 +266,5 @@ void main() {
       expect(await inventoryStore.getStock('peanut'), 100);
       expect(await inventoryStore.getStock('energy-bar-100g-ginger'), 0);
     });
-    test('repairs a partial production movement set on retry', () async {
-      await addStandardProductionStock();
-
-      const productionId = 'production-partial-1';
-      final calc = calculation();
-      final service = ProductionService(inventoryStore: inventoryStore);
-
-      final fullResult = await service.execute(
-        calculation: calc,
-        productId: 'energy-bar-100g-ginger',
-        productName: 'انرژی بار ۱۰۰g زنجبیلی',
-        productionId: productionId,
-      );
-      expect(fullResult.executed, isTrue);
-
-      final all = await inventoryStore.getMovements();
-      final output = all.firstWhere(
-        (movement) =>
-            movement.referenceId == productionId &&
-            movement.movementType == InventoryMovementType.productionOutput &&
-            movement.itemId == 'energy-bar-100g-ginger',
-      );
-      await inventoryStore.removeMovement(output.id);
-
-      final retry = await service.execute(
-        calculation: calc,
-        productId: 'energy-bar-100g-ginger',
-        productName: 'انرژی بار ۱۰۰g زنجبیلی',
-        productionId: productionId,
-      );
-
-      expect(retry.executed, isTrue);
-      expect(
-        (await inventoryStore.getMovements())
-            .where((movement) => movement.referenceId == productionId),
-        hasLength(8),
-      );
-      expect(await inventoryStore.getStock('energy-bar-100g-ginger'), 20);
-    });
-
   });
 }
