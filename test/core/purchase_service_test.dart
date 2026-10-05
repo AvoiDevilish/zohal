@@ -249,6 +249,75 @@ void main() {
     );
   });
 
+  test(
+    'recovers supplier credit after return finance and inventory were persisted first',
+    () async {
+      final item = purchase();
+      await service().recordPurchase(item);
+      await service().recordSupplierPayment(
+        paymentId: 'payment-partial-recovery',
+        supplierId: 'supplier-1',
+        supplierName: 'تأمین‌کننده آزمایشی',
+        amount: 4500000,
+      );
+
+      const returnId = 'return-partial-recovery';
+      const quantity = 2.0;
+      const total = 1000000;
+      final now = DateTime(2026, 10, 5);
+
+      await inventory.addMovement(
+        InventoryMovement(
+          id: 'purchase-return-$returnId-raw_date_khesht',
+          itemId: 'raw_date_khesht',
+          itemName: 'خرما خشت',
+          itemType: 'rawMaterial',
+          quantity: quantity,
+          unit: 'کیلوگرم',
+          movementType: InventoryMovementType.purchaseReturn,
+          timestamp: now,
+          unitCost: 500000,
+          referenceId: returnId,
+        ),
+      );
+
+      await finance.addTransaction(
+        FinancialTransaction(
+          id: 'purchase-return-$returnId',
+          createdAt: now,
+          type: 'purchaseReturn',
+          referenceId: returnId,
+          entries: [
+            FinancialEntry(
+              accountId: 'supplier-supplier-1',
+              amount: total,
+              isDebit: true,
+            ),
+            FinancialEntry(
+              accountId: 'inventory-asset',
+              amount: total,
+              isDebit: false,
+            ),
+          ],
+        ),
+      );
+
+      final result = await service().returnPurchase(
+        purchase: item,
+        returnId: returnId,
+        quantities: {'raw_date_khesht': quantity},
+      );
+
+      expect(result.totalAmount, total);
+      expect(await service().getSupplierCredit('supplier-1'), 500000);
+      expect((await creditEntries.getBySupplierId('supplier-1')).single.amount, 500000);
+      expect((await purchaseReturns.getAll()).single.id, returnId);
+      expect((await finance.getTransactions()).where(
+        (transaction) => transaction.id == 'purchase-return-$returnId',
+      ), hasLength(1));
+    },
+  );
+
   test('paid purchase return creates reusable supplier credit', () async {
     await service().recordPurchase(purchase());
     await service().recordSupplierPayment(
