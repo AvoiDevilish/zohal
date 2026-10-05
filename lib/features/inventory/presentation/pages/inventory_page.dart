@@ -7,6 +7,7 @@ import '../../../../core/inventory/inventory_item_store.dart';
 import '../../../../core/inventory/inventory_movement.dart';
 import '../../../../core/inventory/inventory_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
+import '../../../operations/presentation/pages/operations_page.dart';
 
 class InventoryPage extends StatefulWidget {
   const InventoryPage({super.key});
@@ -22,6 +23,7 @@ class _InventoryPageState extends State<InventoryPage> {
   Map<String, double> _stocks = {};
   Map<String, double> _reservedStocks = {};
   List<InventoryMovement> _movements = [];
+  List<InventoryItem> _items = [];
   bool _loading = true;
 
   @override
@@ -37,6 +39,7 @@ class _InventoryPageState extends State<InventoryPage> {
 
     await _itemStore.ensureSeeded();
 
+    final items = await _itemStore.getItems();
     final stocks = await _store.getAllStocks();
     final movements = await _store.getMovements();
     final reservedStocks = <String, double>{};
@@ -48,6 +51,7 @@ class _InventoryPageState extends State<InventoryPage> {
     if (!mounted) return;
 
     setState(() {
+      _items = items;
       _stocks = stocks;
       _reservedStocks = reservedStocks;
       _movements = movements;
@@ -70,7 +74,7 @@ class _InventoryPageState extends State<InventoryPage> {
   Future<void> _openAddMovement() async {
     final result = await showDialog<InventoryMovement>(
       context: context,
-      builder: (_) => const _AddMovementDialog(),
+      builder: (_) => _AddMovementDialog(items: _items),
     );
 
     if (!mounted || result == null) return;
@@ -120,6 +124,24 @@ class _InventoryPageState extends State<InventoryPage> {
                 ),
                 children: [
                   _buildSummary(),
+                  const SizedBox(height: AppSpacing.md),
+                  ZohalCard(
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const CircleAvatar(child: Icon(Icons.shopping_cart_outlined)),
+                      title: const Text('خرید مواد و اقلام', style: TextStyle(fontWeight: FontWeight.w800)),
+                      subtitle: const Text('ثبت خرید، افزایش موجودی و حساب تأمین‌کننده'),
+                      trailing: const Icon(Icons.chevron_left_rounded),
+                      onTap: () async {
+                        await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const OperationsPage()));
+                        await _loadInventory();
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _buildSectionTitle('لیست اقلام'),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildItemCatalog(),
                   const SizedBox(height: AppSpacing.lg),
                   _buildSectionTitle('موجودی فعلی'),
                   const SizedBox(height: AppSpacing.sm),
@@ -203,6 +225,55 @@ class _InventoryPageState extends State<InventoryPage> {
     );
   }
 
+  Widget _buildItemCatalog() {
+    if (_items.isEmpty) {
+      return const ZohalCard(child: Text('هنوز قلمی در انبار تعریف نشده است.'));
+    }
+    return Column(
+      children: _items.map((item) {
+        final stock = _stocks[item.id] ?? 0;
+        final reserved = _reservedStocks[item.id] ?? 0;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: ZohalCard(
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: AppColors.yellow.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: const Icon(Icons.inventory_2_outlined),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${item.category ?? 'بدون دسته'} • ${item.type.title} • ${item.unit}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        'موجودی: ${_formatNumber(stock)} ${item.unit} • رزرو: ${_formatNumber(reserved)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildStockList() {
     if (_stocks.isEmpty) {
       return const ZohalCard(
@@ -212,64 +283,21 @@ class _InventoryPageState extends State<InventoryPage> {
         ),
       );
     }
-
-    final stockItems = _stocks.entries.toList();
-
+    final stockItems = _items.where((item) => _stocks.containsKey(item.id)).toList();
     return Column(
-      children: stockItems.map((entry) {
-        final movement = _movements.firstWhere(
-          (item) => item.itemId == entry.key,
-          orElse: () => _movements.first,
-        );
-
+      children: stockItems.map((item) {
+        final value = _stocks[item.id] ?? 0;
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: ZohalCard(
             child: Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.yellow.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.inventory_2_outlined),
-                ),
+                const Icon(Icons.inventory_2_outlined),
                 const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        movement.itemName,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        movement.unit,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'آزاد: ' +
-                            _formatNumber(
-                              entry.value - (_reservedStocks[entry.key] ?? 0),
-                            ) +
-                            '  •  رزرو: ' +
-                            _formatNumber(_reservedStocks[entry.key] ?? 0),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                Expanded(child: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w700))),
                 Text(
-                  _formatNumber(entry.value),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  '${_formatNumber(value)} ${item.unit}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ],
             ),
@@ -340,7 +368,8 @@ class _InventoryPageState extends State<InventoryPage> {
 }
 
 class _AddMovementDialog extends StatefulWidget {
-  const _AddMovementDialog();
+  const _AddMovementDialog({required this.items});
+  final List<InventoryItem> items;
 
   @override
   State<_AddMovementDialog> createState() => _AddMovementDialogState();
@@ -348,161 +377,129 @@ class _AddMovementDialog extends StatefulWidget {
 
 class _AddMovementDialogState extends State<_AddMovementDialog> {
   final _formKey = GlobalKey<FormState>();
-
-  late final TextEditingController _itemName;
-  late final TextEditingController _quantity;
-  late final TextEditingController _unit;
-  late final TextEditingController _note;
-
-  InventoryMovementType _movementType = InventoryMovementType.purchase;
+  late String itemId;
+  late final TextEditingController quantity;
+  late final TextEditingController note;
+  InventoryMovementType movementType = InventoryMovementType.purchase;
+  String? selectedUnit;
 
   @override
   void initState() {
     super.initState();
+    itemId = widget.items.first.id;
+    selectedUnit = widget.items.first.unit;
+    quantity = TextEditingController(text: '1');
+    note = TextEditingController();
+  }
 
-    _itemName = TextEditingController();
-    _quantity = TextEditingController();
-    _unit = TextEditingController(text: 'کیلوگرم');
-    _note = TextEditingController();
+  InventoryItem get item => widget.items.firstWhere((x) => x.id == itemId);
+
+  List<InventoryUnitConversion> get conversions {
+    final values = <InventoryUnitConversion>[
+      InventoryUnitConversion(unit: item.unit, toBaseFactor: 1),
+      ...item.unitConversions,
+    ];
+    final seen = <String>{};
+    return values.where((x) => seen.add(x.unit)).toList();
   }
 
   @override
   void dispose() {
-    _itemName.dispose();
-    _quantity.dispose();
-    _unit.dispose();
-    _note.dispose();
+    quantity.dispose();
+    note.dispose();
     super.dispose();
   }
 
-  void _submit() {
+  void submit() {
     if (!_formKey.currentState!.validate()) return;
-
-    final quantity = double.parse(_quantity.text.trim().replaceAll(',', '.'));
-
-    final name = _itemName.text.trim();
-
-    final movement = InventoryMovement(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      itemId: _makeItemId(name),
-      itemName: name,
-      itemType: 'manual',
-      quantity: quantity,
-      unit: _unit.text.trim(),
-      movementType: _movementType,
-      timestamp: DateTime.now(),
-      note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+    final q = double.parse(quantity.text.trim().replaceAll(',', '.'));
+    final conversion = conversions.firstWhere((x) => x.unit == selectedUnit);
+    final baseQuantity = q * conversion.toBaseFactor;
+    final noteParts = <String>[
+      if (selectedUnit != item.unit) 'مقدار ورودی: $q $selectedUnit',
+      if (note.text.trim().isNotEmpty) note.text.trim(),
+    ];
+    Navigator.of(context).pop(
+      InventoryMovement(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        itemId: item.id,
+        itemName: item.name,
+        itemType: item.type.key,
+        quantity: baseQuantity,
+        unit: item.unit,
+        movementType: movementType,
+        timestamp: DateTime.now(),
+        note: noteParts.isEmpty ? null : noteParts.join(' • '),
+      ),
     );
-
-    Navigator.of(context).pop(movement);
-  }
-
-  String _makeItemId(String name) {
-    return name.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '_');
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('ثبت گردش موجودی'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _itemName,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'نام قلم',
-                  prefixIcon: Icon(Icons.inventory_2_outlined),
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('ثبت گردش موجودی'),
+    content: Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: itemId,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'نام قلم'),
+              items: widget.items.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  itemId = value;
+                  selectedUnit = item.unit;
+                });
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            DropdownButtonFormField<InventoryMovementType>(
+              initialValue: movementType,
+              decoration: const InputDecoration(labelText: 'نوع گردش'),
+              items: InventoryMovementType.values.map((x) => DropdownMenuItem(value: x, child: Text(x.title))).toList(),
+              onChanged: (value) => setState(() => movementType = value ?? movementType),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: quantity,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'مقدار'),
+                    validator: (value) {
+                      final n = double.tryParse(value?.replaceAll(',', '.') ?? '');
+                      return n == null || n <= 0 ? 'مقدار معتبر وارد کنید' : null;
+                    },
+                  ),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'نام قلم را وارد کنید';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              DropdownButtonFormField<InventoryMovementType>(
-                initialValue: _movementType,
-                decoration: const InputDecoration(
-                  labelText: 'نوع گردش',
-                  prefixIcon: Icon(Icons.swap_vert),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: selectedUnit,
+                    decoration: const InputDecoration(labelText: 'واحد'),
+                    items: conversions.map((x) => DropdownMenuItem(value: x.unit, child: Text(x.unit))).toList(),
+                    onChanged: (value) => setState(() => selectedUnit = value),
+                  ),
                 ),
-                items: InventoryMovementType.values.map((type) {
-                  return DropdownMenuItem(value: type, child: Text(type.title));
-                }).toList(),
-                onChanged: (value) {
-                  if (value == null) return;
-
-                  setState(() {
-                    _movementType = value;
-                  });
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextFormField(
-                controller: _quantity,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'مقدار',
-                  prefixIcon: Icon(Icons.numbers),
-                ),
-                validator: (value) {
-                  final number = double.tryParse(
-                    value?.trim().replaceAll(',', '.') ?? '',
-                  );
-
-                  if (number == null || number <= 0) {
-                    return 'مقدار معتبر وارد کنید';
-                  }
-
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextFormField(
-                controller: _unit,
-                decoration: const InputDecoration(
-                  labelText: 'واحد',
-                  prefixIcon: Icon(Icons.straighten),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'واحد را وارد کنید';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextFormField(
-                controller: _note,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'یادداشت',
-                  prefixIcon: Icon(Icons.notes_outlined),
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(controller: note, maxLines: 2, decoration: const InputDecoration(labelText: 'یادداشت')),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('انصراف'),
-        ),
-        FilledButton(onPressed: _submit, child: const Text('ثبت')),
-      ],
-    );
-  }
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
+      FilledButton(onPressed: submit, child: const Text('ثبت')),
+    ],
+  );
 }
-
 
 class _InventoryItemDialog extends StatefulWidget {
   const _InventoryItemDialog();
@@ -514,14 +511,34 @@ class _InventoryItemDialog extends StatefulWidget {
 class _InventoryItemDialogState extends State<_InventoryItemDialog> {
   final formKey = GlobalKey<FormState>();
   final name = TextEditingController();
-  final unit = TextEditingController(text: 'عدد');
   final minimum = TextEditingController(text: '0');
-  InventoryItemType type = InventoryItemType.rawMaterial;
+  String category = 'مواد اولیه';
+  String unit = 'g';
+
+  static const categories = [
+    'مواد اولیه',
+    'خرما',
+    'آجیل',
+    'اقلام مصرفی',
+    'بسته‌بندی',
+    'محصول نیمه‌آماده',
+    'محصول',
+  ];
+  static const units = ['g', 'kg', 'piece', 'ml', 'liter', 'box', 'package'];
+
+  InventoryItemType get type {
+    switch (category) {
+      case 'بسته‌بندی': return InventoryItemType.packaging;
+      case 'اقلام مصرفی': return InventoryItemType.consumable;
+      case 'محصول نیمه‌آماده': return InventoryItemType.semiFinished;
+      case 'محصول': return InventoryItemType.product;
+      default: return InventoryItemType.rawMaterial;
+    }
+  }
 
   @override
   void dispose() {
     name.dispose();
-    unit.dispose();
     minimum.dispose();
     super.dispose();
   }
@@ -534,8 +551,9 @@ class _InventoryItemDialogState extends State<_InventoryItemDialog> {
         id: DateTime.now().microsecondsSinceEpoch.toString(),
         name: name.text.trim(),
         type: type,
-        unit: unit.text.trim(),
-        minimumStock: double.parse(minimum.text),
+        category: category,
+        unit: unit,
+        minimumStock: double.parse(minimum.text.replaceAll(',', '.')),
       ),
     );
   }
@@ -546,30 +564,40 @@ class _InventoryItemDialogState extends State<_InventoryItemDialog> {
     content: Form(
       key: formKey,
       child: SingleChildScrollView(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextFormField(
-            controller: name,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: 'نام قلم'),
-            validator: (v) => v == null || v.trim().isEmpty ? 'نام قلم را وارد کنید' : null,
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<InventoryItemType>(
-            initialValue: type,
-            decoration: const InputDecoration(labelText: 'دسته'),
-            items: InventoryItemType.values.map((x) => DropdownMenuItem(value: x, child: Text(x.title))).toList(),
-            onChanged: (v) { if (v != null) setState(() => type = v); },
-          ),
-          const SizedBox(height: 10),
-          TextFormField(controller: unit, decoration: const InputDecoration(labelText: 'واحد')),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: minimum,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'حداقل موجودی'),
-            validator: (v) => double.tryParse(v ?? '') == null ? 'عدد معتبر وارد کنید' : null,
-          ),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: name,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'نام قلم'),
+              validator: (v) => v == null || v.trim().isEmpty ? 'نام قلم را وارد کنید' : null,
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              initialValue: category,
+              decoration: const InputDecoration(labelText: 'دسته'),
+              items: categories.map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
+              onChanged: (v) => setState(() => category = v ?? category),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              initialValue: unit,
+              decoration: const InputDecoration(labelText: 'واحد اندازه‌گیری'),
+              items: units.map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
+              onChanged: (v) => setState(() => unit = v ?? unit),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: minimum,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'حداقل موجودی'),
+              validator: (v) => double.tryParse(v?.replaceAll(',', '.') ?? '') == null ? 'عدد معتبر وارد کنید' : null,
+            ),
+            const SizedBox(height: 10),
+            const Text('ارزش غذایی از همین فرم اجباری نیست و در نسخه بعدی قابل تکمیل خواهد بود.'),
+          ],
+        ),
       ),
     ),
     actions: [
