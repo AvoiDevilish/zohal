@@ -140,6 +140,8 @@ class ProductionCalculator {
       );
     }
 
+    _validateUniqueRequirements(requirements);
+
     final byproducts = <ProductionByproduct>[];
     if (datePitMaterialId != null &&
         datePitMaterialName != null &&
@@ -162,6 +164,19 @@ class ProductionCalculator {
       requirements: List.unmodifiable(requirements),
       byproducts: List.unmodifiable(byproducts),
     );
+  }
+
+  void _validateUniqueRequirements(List<ProductionRequirement> requirements) {
+    final seenMaterialIds = <String>{};
+
+    for (final requirement in requirements) {
+      if (!seenMaterialIds.add(requirement.materialId)) {
+        throw ArgumentError(
+          'یک ماده نمی‌تواند بیش از یک بار در نیازمندی‌های یک تولید تکرار شود: '
+          '${requirement.materialId}',
+        );
+      }
+    }
   }
 
   void _validateNutAllocations(List<NutAllocation> allocations) {
