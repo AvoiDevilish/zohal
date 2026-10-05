@@ -70,14 +70,14 @@ class RecipeCatalog {
 
     return [
       PackagingRule(
-        productVariantId: productVariantId,
+        productVariantId: product.id,
         materialId: containerId,
         materialName: containerName,
         quantityPerUnit: 1,
         unit: 'عدد',
       ),
       PackagingRule(
-        productVariantId: productVariantId,
+        productVariantId: product.id,
         materialId: 'pack_label',
         materialName: 'لیبل',
         quantityPerUnit: 1,
