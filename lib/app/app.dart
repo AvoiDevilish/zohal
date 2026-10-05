@@ -52,7 +52,7 @@ class _ZohalHomePageState extends State<ZohalHomePage> {
     ).migrateLegacyPeople();
   }
 
-  final List<Widget> _pages = const [
+  final List<Widget> _pages = [
     InventoryPage(),
     SalesOrderPage(),
     DashboardPage(),
