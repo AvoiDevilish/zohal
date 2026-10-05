@@ -152,4 +152,3 @@ class SaleService {
     return true;
   }
 }
-}
