@@ -186,7 +186,7 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
                             onPressed: () async {
                               await Navigator.of(context).push(
                                 MaterialPageRoute<void>(
-                                  builder: (_) => const SalesOrderPage(),
+                                  builder: (_) => SalesOrderPage(initialCustomerId: widget.personId),
                                 ),
                               );
                               await _load();
@@ -202,7 +202,7 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
                             onPressed: () async {
                               await Navigator.of(context).push(
                                 MaterialPageRoute<void>(
-                                  builder: (_) => const OperationsPage(),
+                                  builder: (_) => OperationsPage(initialSupplierId: widget.personId),
                                 ),
                               );
                               await _load();
