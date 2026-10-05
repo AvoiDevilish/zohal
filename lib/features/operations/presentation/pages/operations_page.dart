@@ -164,7 +164,7 @@ class _PurchaseFormState extends State<_PurchaseForm> {
     final available = widget.items.where((x) => !used.contains(x.id));
     if (available.isEmpty) return;
     final item = available.first;
-    setState(() => rows.add(_PurchaseRow(itemId: item.id, q: TextEditingController(text: '1'), c: TextEditingController()));
+    setState(() => rows.add(_PurchaseRow(itemId: item.id, q: TextEditingController(text: '1'), c: TextEditingController())));
   }
 
   InventoryItem item(_PurchaseRow row) => widget.items.firstWhere((x) => x.id == row.itemId);
@@ -401,7 +401,10 @@ class _ReturnsTabState extends State<_ReturnsTab> {
     final q = await quantity(d.lines.first.quantity.toDouble());
     if (q == null) return;
     try {
-      final customer = await CustomerStore.instance.getById(d.customerId);
+      final customers = await CustomerStore.instance.getAll();
+      final customer = customers.where((x) => x.id == d.customerId).isEmpty
+          ? null
+          : customers.firstWhere((x) => x.id == d.customerId);
       await salesService.returnItems(
         delivery: d, returnId: DateTime.now().microsecondsSinceEpoch.toString(),
         customerName: customer?.name ?? 'مشتری',
