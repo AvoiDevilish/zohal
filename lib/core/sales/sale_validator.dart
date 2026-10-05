@@ -24,9 +24,15 @@ class SaleValidator {
       }
     }
 
+    final itemIds = <String>{};
+
     for (final item in sale.items) {
       if (item.productVariantId.trim().isEmpty) {
         throw ArgumentError('Sale item product variant id cannot be empty.');
+      }
+
+      if (!itemIds.add(item.productVariantId)) {
+        throw ArgumentError('هر محصول باید فقط یک بار در اقلام فروش ثبت شود: ' + item.productVariantId);
       }
 
       if (item.productName.trim().isEmpty) {
