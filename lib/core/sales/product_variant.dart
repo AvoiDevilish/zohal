@@ -1,3 +1,5 @@
+import '../inventory/inventory_item.dart';
+
 class ProductVariant {
   const ProductVariant({
     required this.id,
@@ -7,6 +9,7 @@ class ProductVariant {
     required this.packageGrams,
     required this.currentSellingPrice,
     this.isActive = true,
+    this.nutrition,
   });
 
   final String id;
@@ -16,6 +19,7 @@ class ProductVariant {
   final int packageGrams;
   final int currentSellingPrice;
   final bool isActive;
+  final NutritionProfile? nutrition;
 
   String get displayName => '$productName - $flavor - $packageLabel';
 
@@ -27,6 +31,7 @@ class ProductVariant {
     int? packageGrams,
     int? currentSellingPrice,
     bool? isActive,
+    NutritionProfile? nutrition,
   }) {
     return ProductVariant(
       id: id ?? this.id,
@@ -36,6 +41,7 @@ class ProductVariant {
       packageGrams: packageGrams ?? this.packageGrams,
       currentSellingPrice: currentSellingPrice ?? this.currentSellingPrice,
       isActive: isActive ?? this.isActive,
+      nutrition: nutrition ?? this.nutrition,
     );
   }
 
@@ -47,6 +53,7 @@ class ProductVariant {
     'packageGrams': packageGrams,
     'currentSellingPrice': currentSellingPrice,
     'isActive': isActive,
+    'nutrition': nutrition?.toMap(),
   };
 
   factory ProductVariant.fromMap(Map<String, dynamic> map) {
@@ -58,6 +65,9 @@ class ProductVariant {
       packageGrams: (map['packageGrams'] as num).toInt(),
       currentSellingPrice: (map['currentSellingPrice'] as num).toInt(),
       isActive: map['isActive'] as bool? ?? true,
+      nutrition: map['nutrition'] is Map
+          ? NutritionProfile.fromMap(Map<String, dynamic>.from(map['nutrition'] as Map))
+          : null,
     );
   }
 }
