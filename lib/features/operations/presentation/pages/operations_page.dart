@@ -160,6 +160,20 @@ class _PurchasesTabState extends State<_PurchasesTab> {
   );
 }
 
+class _PurchaseRow {
+  _PurchaseRow({
+    required this.itemId,
+    required this.unit,
+    required this.q,
+    required this.c,
+  });
+
+  String itemId;
+  String unit;
+  final TextEditingController q;
+  final TextEditingController c;
+}
+
 class _PurchaseForm extends StatefulWidget {
   const _PurchaseForm({required this.suppliers, required this.items, this.initialSupplierId});
   final List<Supplier> suppliers;
