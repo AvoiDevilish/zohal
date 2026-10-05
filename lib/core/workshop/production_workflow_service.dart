@@ -25,7 +25,7 @@ class ProductionWorkflowService {
   final ProductionCostStore productionCostStore;
   final CostAllocationStore costAllocationStore;
 
-  const ProductionWorkflowService({
+  ProductionWorkflowService({
     required this.productionService,
     required this.productionCostService,
     required this.productionBatchStore,
