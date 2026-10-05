@@ -8,6 +8,8 @@ class CostLayer {
   final double unitCost;
   final DateTime createdAt;
   final String? purchaseId;
+  final String? lotNumber;
+  final DateTime? expiryDate;
 
   const CostLayer({
     required this.id,
@@ -19,6 +21,8 @@ class CostLayer {
     required this.unitCost,
     required this.createdAt,
     this.purchaseId,
+    this.lotNumber,
+    this.expiryDate,
   });
 
   double get totalCost => quantity * unitCost;
@@ -35,6 +39,8 @@ class CostLayer {
     double? unitCost,
     DateTime? createdAt,
     String? purchaseId,
+    String? lotNumber,
+    DateTime? expiryDate,
   }) {
     return CostLayer(
       id: id ?? this.id,
@@ -46,6 +52,8 @@ class CostLayer {
       unitCost: unitCost ?? this.unitCost,
       createdAt: createdAt ?? this.createdAt,
       purchaseId: purchaseId ?? this.purchaseId,
+      lotNumber: lotNumber ?? this.lotNumber,
+      expiryDate: expiryDate ?? this.expiryDate,
     );
   }
 
@@ -60,6 +68,8 @@ class CostLayer {
       'unitCost': unitCost,
       'createdAt': createdAt.toIso8601String(),
       'purchaseId': purchaseId,
+      'lotNumber': lotNumber,
+      'expiryDate': expiryDate?.toIso8601String(),
     };
   }
 
@@ -74,6 +84,10 @@ class CostLayer {
       unitCost: (map['unitCost'] as num).toDouble(),
       createdAt: DateTime.parse(map['createdAt'] as String),
       purchaseId: map['purchaseId'] as String?,
+      lotNumber: map['lotNumber'] as String?,
+      expiryDate: map['expiryDate'] == null
+          ? null
+          : DateTime.parse(map['expiryDate'] as String),
     );
   }
 }
