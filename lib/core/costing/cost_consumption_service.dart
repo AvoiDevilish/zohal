@@ -91,7 +91,7 @@ class CostConsumptionService {
     if (method == CostingMethod.weightedAverage) {
       final allocation = calculation.allocations.first;
       final layer = layers.first;
-      final now = DateTime.now();
+      final createdAt = DateTime.now();
       final weightedAllocation = allocation_model.CostAllocation(
         id: 'cost-allocation-$referenceId-0',
         materialId: layer.materialId,
@@ -102,7 +102,7 @@ class CostConsumptionService {
         unitCost: allocation.unitCost,
         totalCost: allocation.totalCost,
         referenceId: referenceId,
-        createdAt: now,
+        createdAt: createdAt,
         sourceLotNumber: layer.lotNumber,
         sourceExpiryDate: layer.expiryDate,
       );
@@ -115,7 +115,7 @@ class CostConsumptionService {
       );
     }
 
-    final now = DateTime.now();
+    final createdAt = DateTime.now();
     final allocations = <allocation_model.CostAllocation>[];
 
     for (var index = 0; index < calculation.allocations.length; index++) {
@@ -141,7 +141,7 @@ class CostConsumptionService {
           unitCost: allocation.unitCost,
           totalCost: allocation.totalCost,
           referenceId: referenceId,
-          createdAt: now,
+          createdAt: createdAt,
           sourceLotNumber: layer.lotNumber,
           sourceExpiryDate: layer.expiryDate,
         ),
