@@ -202,7 +202,19 @@ class _ProductFormState extends State<_ProductForm> {
           ZohalCard(child: Column(children: [
             TextFormField(controller: name, decoration: const InputDecoration(labelText: 'نام محصول'), validator: (v) => requiredText(v, 'نام محصول')),
             const SizedBox(height: 12),
-            TextFormField(controller: flavor, decoration: const InputDecoration(labelText: 'طعم / مدل'), validator: (v) => requiredText(v, 'طعم / مدل')),
+            DropdownButtonFormField<String>(
+              initialValue: ['زنجبیل', 'آرد نخودچی', 'ساده (پودر نشاسته ذرت)'].contains(flavor.text)
+                  ? flavor.text
+                  : null,
+              decoration: const InputDecoration(labelText: 'طعم / مدل'),
+              items: const [
+                DropdownMenuItem(value: 'زنجبیل', child: Text('زنجبیل')),
+                DropdownMenuItem(value: 'آرد نخودچی', child: Text('آرد نخودچی')),
+                DropdownMenuItem(value: 'ساده (پودر نشاسته ذرت)', child: Text('ساده (پودر نشاسته ذرت)')),
+              ],
+              onChanged: (value) => setState(() => flavor.text = value ?? ''),
+              validator: (v) => requiredText(v, 'طعم / مدل'),
+            ),
             const SizedBox(height: 12),
             TextFormField(controller: pack, decoration: const InputDecoration(labelText: 'نوع بسته‌بندی'), validator: (v) => requiredText(v, 'بسته‌بندی')),
             const SizedBox(height: 12),
