@@ -21,6 +21,7 @@ class _PeoplePageState extends State<PeoplePage> {
   final _customerStore = CustomerStore.instance;
   final _supplierStore = SupplierStore.instance;
 
+  List<Person> people = [];
   List<Customer> customers = [];
   List<Supplier> suppliers = [];
   int tab = 0;
@@ -35,10 +36,12 @@ class _PeoplePageState extends State<PeoplePage> {
 
   Future<void> load() async {
     setState(() => loading = true);
+    final personRows = await PersonStore.instance.getAll();
     final customerRows = await _customerStore.getAll();
     final supplierRows = await _supplierStore.getAll();
     if (!mounted) return;
     setState(() {
+      people = personRows.where((item) => showInactive ? !item.isActive : item.isActive).toList();
       customers = customerRows.where((item) => showInactive ? !item.isActive : item.isActive).toList();
       suppliers = supplierRows.where((item) => showInactive ? !item.isActive : item.isActive).toList();
       loading = false;
@@ -144,6 +147,14 @@ class _PeoplePageState extends State<PeoplePage> {
     await load();
   }
 
+  PersonType _personType(String id) {
+    final matches = people.where((item) => item.id == id);
+    if (matches.isNotEmpty && matches.first.isCustomer && matches.first.isSupplier) {
+      return PersonType.both;
+    }
+    return tab == 0 ? PersonType.customer : PersonType.supplier;
+  }
+
   @override
   Widget build(BuildContext context) {
     final people = tab == 0 ? customers : suppliers;
@@ -233,7 +244,7 @@ class _PeoplePageState extends State<PeoplePage> {
                                   builder: (_) => PersonProfilePage(
                                     personId: person.id,
                                     name: person.name,
-                                    type: PersonType.customer,
+                                    type: _personType(person.id),
                                     phone: person.phone,
                                     notes: person.notes,
                                   ),
@@ -255,7 +266,7 @@ class _PeoplePageState extends State<PeoplePage> {
                                 builder: (_) => PersonProfilePage(
                                   personId: person.id,
                                   name: person.name,
-                                  type: PersonType.supplier,
+                                  type: _personType(person.id),
                                   phone: person.phone,
                                   notes: person.notes,
                                 ),
