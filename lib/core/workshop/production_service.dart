@@ -71,19 +71,35 @@ class ProductionService {
   }) async {
     final existingMovements = await inventoryStore.getMovements();
 
-    final alreadyExecuted = existingMovements.any(
-      (movement) =>
-          movement.referenceId == batch.id &&
-          (movement.movementType ==
-                  InventoryMovementType.productionConsumption ||
+    final expectedMovements = _buildMovements(
+      batch: batch,
+      calculation: calculation,
+    );
+    final movementsById = {
+      for (final movement in existingMovements) movement.id: movement,
+    };
+    final relatedMovements = existingMovements.where(
+      (movement) => movement.referenceId == batch.id &&
+          (movement.movementType == InventoryMovementType.productionConsumption ||
               movement.movementType == InventoryMovementType.productionOutput),
     );
+
+    for (final expected in expectedMovements) {
+      final existing = movementsById[expected.id];
+      if (existing != null && !_sameMovement(existing, expected)) {
+        throw StateError(
+          'حرکت تولید "${expected.id}" با اطلاعات مورد انتظار همخوانی ندارد.',
+        );
+      }
+    }
+
+    final alreadyExecuted = relatedMovements.isNotEmpty;
 
     final stockCheck = await ProductionInventoryChecker(
       inventoryStore: inventoryStore,
     ).check(calculation);
 
-    if (alreadyExecuted) {
+    if (alreadyExecuted && relatedMovements.length == expectedMovements.length) {
       final completedBatch = batch.copyWith(
         status: ProductionBatchStatus.completed,
       );
@@ -96,7 +112,7 @@ class ProductionService {
       );
     }
 
-    if (!stockCheck.canProduce) {
+    if (!stockCheck.canProduce && !alreadyExecuted) {
       return ProductionExecutionResult(
         productionId: batch.id,
         stockCheck: stockCheck,
@@ -107,9 +123,29 @@ class ProductionService {
 
     final lifecycle = const ProductionLifecycle();
     final inProductionBatch = lifecycle.start(batch);
-    final timestamp = DateTime.now();
+    final missingMovements = expectedMovements.where(
+      (movement) => !movementsById.containsKey(movement.id),
+    ).toList();
 
-    final movements = <InventoryMovement>[
+    if (missingMovements.isNotEmpty) {
+      await inventoryStore.addMovements(missingMovements);
+    }
+
+    final completedBatch = lifecycle.complete(inProductionBatch);
+    return ProductionExecutionResult(
+      productionId: batch.id,
+      stockCheck: stockCheck,
+      executed: true,
+      batch: completedBatch,
+    );
+  }
+
+  List<InventoryMovement> _buildMovements({
+    required ProductionBatch batch,
+    required ProductionCalculation calculation,
+  }) {
+    final timestamp = DateTime.now();
+    return [
       for (final requirement in calculation.requirements)
         InventoryMovement(
           id: '${batch.id}-consumption-${requirement.materialId}',
@@ -149,16 +185,17 @@ class ProductionService {
           note: 'محصول جانبی قابل استفاده: ${byproduct.itemName}',
         ),
     ];
+  }
 
-    await inventoryStore.addMovements(movements);
-
-    final completedBatch = lifecycle.complete(inProductionBatch);
-    return ProductionExecutionResult(
-      productionId: batch.id,
-      stockCheck: stockCheck,
-      executed: true,
-      batch: completedBatch,
-    );
+  bool _sameMovement(InventoryMovement left, InventoryMovement right) {
+    return left.id == right.id &&
+        left.itemId == right.itemId &&
+        left.itemName == right.itemName &&
+        left.itemType == right.itemType &&
+        (left.quantity - right.quantity).abs() <= 0.000001 &&
+        left.unit == right.unit &&
+        left.movementType == right.movementType &&
+        left.referenceId == right.referenceId;
   }
 
   String _inventoryItemType(ProductionRequirementType type) {
