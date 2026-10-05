@@ -62,8 +62,8 @@ void main() {
     expect(result!.productName, 'محصول قدیمی');
 
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('production_batches'), isNotNull);
-    expect(prefs.getStringList('production_batches'), isNull);
+    expect(prefs.get('production_batches'), isA<String>());
+
   });
 
   test('preserves traceability fields through persistence', () async {
