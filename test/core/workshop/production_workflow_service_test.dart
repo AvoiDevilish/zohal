@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zohal_android_test/core/costing/cost_allocation_store.dart';
 import 'package:zohal_android_test/core/costing/cost_layer.dart';
+import 'package:zohal_android_test/core/costing/costing_method.dart';
 import 'package:zohal_android_test/core/costing/cost_layer_store.dart';
 import 'package:zohal_android_test/core/costing/cost_consumption_service.dart';
 import 'package:zohal_android_test/core/costing/production_cost_service.dart';
@@ -331,6 +332,192 @@ void main() {
       expect(
         await batchStore.getById(batch().id),
         isNull,
+      );
+    },
+  );
+
+  test(
+    'preflights FEFO so expired costing does not consume inventory',
+    () async {
+      await addInventoryStock(
+        itemId: 'date',
+        itemName: 'خرما',
+        quantity: 2000,
+        unit: 'g',
+      );
+      await addInventoryStock(
+        itemId: 'box',
+        itemName: 'ظرف',
+        quantity: 20,
+        unit: 'unit',
+        itemType: 'packaging',
+      );
+
+      await costLayerStore.add(
+        CostLayer(
+          id: 'expired-date-layer',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 2000,
+          remainingQuantity: 2000,
+          unit: 'g',
+          unitCost: 10,
+          createdAt: DateTime(2026, 1, 1),
+          purchaseId: 'purchase-expired-date',
+          lotNumber: 'LOT-EXPIRED',
+          expiryDate: DateTime(2026, 6, 30),
+        ),
+      );
+      await addCostLayer(
+        id: 'box-layer',
+        materialId: 'box',
+        materialName: 'ظرف',
+        quantity: 20,
+        unit: 'unit',
+        unitCost: 500,
+      );
+
+      expect(
+        () => service.execute(
+          batch: batch(),
+          calculation: calculation(),
+          costingMethod: CostingMethod.fefo,
+          now: DateTime(2026, 7, 1),
+        ),
+        throwsStateError,
+      );
+
+      expect(await inventoryStore.getStock('date'), 2000);
+      expect(await inventoryStore.getStock('box'), 20);
+      expect(
+        (await inventoryStore.getMovements())
+            .where((item) => item.referenceId == batch().id),
+        isEmpty,
+      );
+      expect(
+        await allocationStore.getAllocations(referenceId: batch().id),
+        isEmpty,
+      );
+      expect(
+        (await costLayerStore.getById('expired-date-layer'))!.remainingQuantity,
+        2000,
+      );
+      expect(await costStore.getByProductionId(batch().id), isNull);
+      expect(await batchStore.getById(batch().id), isNull);
+    },
+  );
+
+  test(
+    'executes multi-lot FEFO through production workflow and retry stays idempotent',
+    () async {
+      await addInventoryStock(
+        itemId: 'date',
+        itemName: 'خرما',
+        quantity: 1000,
+        unit: 'g',
+      );
+      await addInventoryStock(
+        itemId: 'box',
+        itemName: 'ظرف',
+        quantity: 20,
+        unit: 'unit',
+        itemType: 'packaging',
+      );
+
+      await costLayerStore.add(
+        CostLayer(
+          id: 'fefo-late',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 600,
+          remainingQuantity: 600,
+          unit: 'g',
+          unitCost: 30,
+          createdAt: DateTime(2026, 1, 2),
+          purchaseId: 'purchase-fefo-late',
+          lotNumber: 'LOT-LATE',
+          expiryDate: DateTime(2026, 6, 30),
+        ),
+      );
+      await costLayerStore.add(
+        CostLayer(
+          id: 'fefo-early',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 400,
+          remainingQuantity: 400,
+          unit: 'g',
+          unitCost: 20,
+          createdAt: DateTime(2026, 1, 3),
+          purchaseId: 'purchase-fefo-early',
+          lotNumber: 'LOT-EARLY',
+          expiryDate: DateTime(2026, 3, 31),
+        ),
+      );
+      await addCostLayer(
+        id: 'box-layer',
+        materialId: 'box',
+        materialName: 'ظرف',
+        quantity: 20,
+        unit: 'unit',
+        unitCost: 500,
+      );
+
+      final first = await service.execute(
+        batch: batch(),
+        calculation: calculation(),
+        costingMethod: CostingMethod.fefo,
+        now: DateTime(2026, 1, 1),
+      );
+
+      expect(first.cost.totalCost, 26000);
+      expect(first.execution.batch.sourceLotNumbers, [
+        'LOT-EARLY',
+        'LOT-LATE',
+      ]);
+
+      final allocations = await allocationStore.getAllocations();
+      expect(allocations, hasLength(3));
+
+      final dateAllocations = allocations
+          .where((allocation) => allocation.materialId == 'date')
+          .toList()
+        ..sort((a, b) => a.costLayerId.compareTo(b.costLayerId));
+      expect(dateAllocations, hasLength(2));
+      expect(
+        dateAllocations
+            .firstWhere((allocation) => allocation.costLayerId == 'fefo-early')
+            .quantity,
+        400,
+      );
+      expect(
+        dateAllocations
+            .firstWhere((allocation) => allocation.costLayerId == 'fefo-late')
+            .quantity,
+        600,
+      );
+
+      final second = await service.execute(
+        batch: batch(),
+        calculation: calculation(),
+        costingMethod: CostingMethod.fefo,
+        now: DateTime(2026, 1, 1),
+      );
+
+      expect(second.execution.alreadyExecuted, isTrue);
+      expect(second.cost.totalCost, first.cost.totalCost);
+      expect(await allocationStore.getAllocations(), hasLength(3));
+      expect(
+        (await costLayerStore.getById('fefo-early'))!.remainingQuantity,
+        0,
+      );
+      expect(
+        (await costLayerStore.getById('fefo-late'))!.remainingQuantity,
+        0,
+      );
+      expect(
+        (await costLayerStore.getById('box-layer'))!.remainingQuantity,
+        10,
       );
     },
   );
