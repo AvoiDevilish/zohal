@@ -235,7 +235,7 @@ void main() {
     expect(await inventoryStore.getStock('energy-bar-100g'), 10);
     expect(
       (await productionBatchStore.getById(batch().id))!.sourceLotNumbers,
-      ['LOT-DATE-E2E'],
+      ['LOT-BOX-E2E', 'LOT-DATE-E2E'],
     );
     expect(
       (await costLayerStore.getById('e2e-date-layer'))!.remainingQuantity,
