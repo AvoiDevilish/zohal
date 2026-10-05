@@ -25,7 +25,8 @@ import '../../../../core/utils/persian_number_formatter.dart';
 import '../../../../core/widgets/zohal_card.dart';
 
 class OperationsPage extends StatefulWidget {
-  const OperationsPage({super.key});
+  const OperationsPage({super.key, this.initialSupplierId});
+  final String? initialSupplierId;
   @override
   State<OperationsPage> createState() => _OperationsPageState();
 }
@@ -96,7 +97,7 @@ class _PurchasesTabState extends State<_PurchasesTab> {
   Future<void> addPurchase() async {
     if (suppliers.isEmpty) return _message('ابتدا یک تأمین‌کننده در بخش اشخاص ثبت کنید.');
     final purchase = await Navigator.of(context).push<Purchase>(
-      MaterialPageRoute(builder: (_) => _PurchaseForm(suppliers: suppliers, items: items)),
+      MaterialPageRoute(builder: (_) => _PurchaseForm(suppliers: suppliers, items: items, initialSupplierId: widget.initialSupplierId)),
     );
     if (purchase == null) return;
     try {
@@ -159,9 +160,10 @@ class _PurchasesTabState extends State<_PurchasesTab> {
 }
 
 class _PurchaseForm extends StatefulWidget {
-  const _PurchaseForm({required this.suppliers, required this.items});
+  const _PurchaseForm({required this.suppliers, required this.items, this.initialSupplierId});
   final List<Supplier> suppliers;
   final List<InventoryItem> items;
+  final String? initialSupplierId;
   @override State<_PurchaseForm> createState() => _PurchaseFormState();
 }
 
@@ -170,7 +172,13 @@ class _PurchaseFormState extends State<_PurchaseForm> {
   final rows = <_PurchaseRow>[];
 
   @override
-  void initState() { super.initState(); supplierId = widget.suppliers.first.id; _add(); }
+  void initState() {
+    super.initState();
+    supplierId = widget.suppliers.any((x) => x.id == widget.initialSupplierId)
+        ? widget.initialSupplierId!
+        : widget.suppliers.first.id;
+    _add();
+  }
   @override
   void dispose() { for (final x in rows) { x.q.dispose(); x.c.dispose(); } super.dispose(); }
 
