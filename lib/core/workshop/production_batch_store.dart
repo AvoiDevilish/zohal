@@ -65,6 +65,20 @@ class ProductionBatchStore {
     );
   }
 
+  Future<void> update(ProductionBatch batch) async {
+    final batches = await getAll();
+    final index = batches.indexWhere((item) => item.id == batch.id);
+    if (index == -1) {
+      throw StateError('Production batch "${batch.id}" پیدا نشد.');
+    }
+    batches[index] = batch;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _key,
+      batches.map((item) => jsonEncode(item.toMap())).toList(),
+    );
+  }
+
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
 
