@@ -199,7 +199,7 @@ void main() {
       paymentId: 'payment-1',
       supplierId: 'supplier-1',
       supplierName: 'تأمین‌کننده آزمایشی',
-      amount: 500000,
+      amount: 2000000,
     );
 
     expect(second.id, first.id);
@@ -467,7 +467,7 @@ void main() {
       allocationId: 'allocation-1',
       purchaseId: laterPurchase.id,
       supplierId: 'supplier-1',
-      amount: 500000,
+      amount: 1500000,
     );
 
     expect(second.id, first.id);
