@@ -1,6 +1,7 @@
 import '../workshop/production_calculator.dart';
 import '../workshop/production_requirement.dart';
 import 'cost_consumption_service.dart';
+import 'costing_method.dart';
 import 'production_cost.dart';
 
 class ProductionCostService {
@@ -11,6 +12,7 @@ class ProductionCostService {
   Future<ProductionCost> calculate({
     required String productionId,
     required ProductionCalculation calculation,
+    CostingMethod method = CostingMethod.fifo,
   }) async {
     var materialCost = 0.0;
     var packagingCost = 0.0;
@@ -21,6 +23,7 @@ class ProductionCostService {
         referenceId: '$productionId-${requirement.materialId}',
         materialId: requirement.materialId,
         quantity: requirement.quantity,
+        method: method,
       );
 
       switch (requirement.type) {
