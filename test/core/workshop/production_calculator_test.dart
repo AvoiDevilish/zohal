@@ -198,6 +198,24 @@ void main() {
       );
     });
 
+    test('rejects duplicate material requirements', () {
+      expect(
+        () => calculator.calculate(
+          recipe: recipe,
+          units: 1,
+          unitWeightGrams: 100,
+          dateMaterialId: 'date',
+          dateMaterialName: 'خرما',
+          nutAllocations: allocations,
+          sesameMaterialId: 'sesame',
+          sesameMaterialName: 'کنجد',
+          flavorMaterialId: 'date',
+          flavorMaterialName: 'خرما',
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('rejects invalid nut percentages', () {
       expect(
         () => calculator.calculate(
