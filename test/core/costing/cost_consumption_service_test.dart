@@ -101,6 +101,98 @@ void main() {
   );
 
   test(
+    'consumes FEFO across multiple lots and retry remains idempotent',
+    () async {
+      await layerStore.add(
+        CostLayer(
+          id: 'fefo-late',
+          materialId: 'date',
+          materialName: 'خرمای خشت',
+          quantity: 2000,
+          remainingQuantity: 2000,
+          unit: 'g',
+          unitCost: 30,
+          createdAt: DateTime(2026, 1, 1),
+          lotNumber: 'LOT-LATE',
+          expiryDate: DateTime(2026, 6, 30),
+        ),
+      );
+      await layerStore.add(
+        CostLayer(
+          id: 'fefo-early',
+          materialId: 'date',
+          materialName: 'خرمای خشت',
+          quantity: 3000,
+          remainingQuantity: 3000,
+          unit: 'g',
+          unitCost: 20,
+          createdAt: DateTime(2026, 1, 2),
+          lotNumber: 'LOT-EARLY',
+          expiryDate: DateTime(2026, 3, 31),
+        ),
+      );
+      await layerStore.add(
+        CostLayer(
+          id: 'fefo-no-expiry',
+          materialId: 'date',
+          materialName: 'خرمای خشت',
+          quantity: 4000,
+          remainingQuantity: 4000,
+          unit: 'g',
+          unitCost: 10,
+          createdAt: DateTime(2025, 12, 1),
+        ),
+      );
+
+      final first = await service.consume(
+        referenceId: 'production-fefo-multi',
+        materialId: 'date',
+        quantity: 4500,
+        method: CostingMethod.fefo,
+        now: DateTime(2026, 1, 1),
+      );
+
+      expect(first.allocations, hasLength(2));
+      expect(first.allocations[0].costLayerId, 'fefo-early');
+      expect(first.allocations[0].quantity, 3000);
+      expect(first.allocations[1].costLayerId, 'fefo-late');
+      expect(first.allocations[1].quantity, 1500);
+      expect(first.totalCost, 105000);
+
+      expect(
+        (await layerStore.getById('fefo-early'))!.remainingQuantity,
+        0,
+      );
+      expect(
+        (await layerStore.getById('fefo-late'))!.remainingQuantity,
+        500,
+      );
+      expect(
+        (await layerStore.getById('fefo-no-expiry'))!.remainingQuantity,
+        4000,
+      );
+
+      final retry = await service.consume(
+        referenceId: 'production-fefo-multi',
+        materialId: 'date',
+        quantity: 4500,
+        method: CostingMethod.fefo,
+        now: DateTime(2026, 1, 1),
+      );
+
+      expect(retry.alreadyConsumed, isTrue);
+      expect(retry.totalCost, first.totalCost);
+      expect(await allocationStore.getAllocations(
+        referenceId: 'production-fefo-multi',
+      ), hasLength(2));
+      expect(
+        (await layerStore.getById('fefo-late'))!.remainingQuantity,
+        500,
+      );
+    },
+  );
+
+  test(
     'rejects consumption when available cost layers are insufficient',
     () async {
       await layerStore.add(
