@@ -327,4 +327,61 @@ void main() {
     expect(stored!.customerId, 'customer-gholami');
     expect(stored.customerName, 'آقای غلامی');
   });
+
+  test('rejects duplicate product variants in one sale', () async {
+    final customer = Customer(id: 'customer-duplicate', name: 'مشتری تکراری', createdAt: DateTime(2026, 1, 1));
+    await customerStore.add(customer);
+    await inventoryStore.addMovement(InventoryMovement(
+      id: 'stock-duplicate', itemId: 'energy-100-ginger', itemName: 'انرژی بار',
+      itemType: 'finishedProduct', quantity: 10, unit: 'عدد',
+      movementType: InventoryMovementType.productionOutput, timestamp: DateTime(2026, 1, 1),
+    ));
+    final sale = Sale(
+      id: 'sale-duplicate', customerId: customer.id, customerName: customer.name,
+      items: const [
+        SaleItem(productVariantId: 'energy-100-ginger', productName: 'انرژی بار', quantity: 6, unitPrice: 100000),
+        SaleItem(productVariantId: 'energy-100-ginger', productName: 'انرژی بار', quantity: 6, unitPrice: 100000),
+      ],
+      saleDate: DateTime(2026, 1, 2),
+    );
+    expect(() => service.registerSale(sale), throwsA(isA<ArgumentError>()));
+    expect(await saleStore.getSales(), isEmpty);
+    expect(await inventoryStore.getStock('energy-100-ginger'), 10);
+  });
+
+  test('reconciles a sale whose inventory movement was missing', () async {
+    final customer = Customer(id: 'customer-recovery', name: 'مشتری بازیابی', createdAt: DateTime(2026, 1, 1));
+    await customerStore.add(customer);
+    final sale = Sale(
+      id: 'sale-recovery', customerId: customer.id, customerName: customer.name,
+      items: const [SaleItem(productVariantId: 'energy-100-ginger', productName: 'انرژی بار', quantity: 3, unitPrice: 100000)],
+      saleDate: DateTime(2026, 1, 2),
+    );
+    await saleStore.add(sale);
+    await inventoryStore.addMovement(InventoryMovement(
+      id: 'stock-recovery', itemId: 'energy-100-ginger', itemName: 'انرژی بار',
+      itemType: 'finishedProduct', quantity: 5, unit: 'عدد',
+      movementType: InventoryMovementType.productionOutput, timestamp: DateTime(2026, 1, 1),
+    ));
+    final result = await service.registerSale(sale);
+    expect(result.alreadyExecuted, isTrue);
+    expect(result.movements, hasLength(1));
+    expect(await inventoryStore.getStock('energy-100-ginger'), 2);
+  });
+
+  test('rejects reusing a sale id with different data', () async {
+    final customer = Customer(id: 'customer-mismatch', name: 'مشتری', createdAt: DateTime(2026, 1, 1));
+    await customerStore.add(customer);
+    final original = Sale(
+      id: 'sale-mismatch', customerId: customer.id, customerName: customer.name,
+      items: const [SaleItem(productVariantId: 'energy-100-ginger', productName: 'انرژی بار', quantity: 1, unitPrice: 100000)],
+      saleDate: DateTime(2026, 1, 2),
+    );
+    await saleStore.add(original);
+    final changed = original.copyWith(items: const [
+      SaleItem(productVariantId: 'energy-100-ginger', productName: 'انرژی بار', quantity: 2, unitPrice: 100000),
+    ]);
+    expect(() => service.registerSale(changed), throwsA(isA<StateError>()));
+  });
+
 }
