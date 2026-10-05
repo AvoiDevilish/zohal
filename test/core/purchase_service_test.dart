@@ -746,4 +746,23 @@ void main() {
       throwsA(isA<StateError>()),
     );
   });
+
+  test('rejects reusing purchase id with different data', () async {
+    final first = purchase();
+    await service().recordPurchase(first);
+    final changed = purchase(quantity: 5, totalAmount: 2500000);
+    expect(() => service().recordPurchase(changed), throwsA(isA<StateError>()));
+    expect(await inventory.getStock('raw_date_khesht'), 10);
+    expect((await finance.getTransactions()).length, 1);
+  });
+
+  test('rejects duplicate purchase line items', () async {
+    final item = purchase();
+    final duplicate = item.copyWith(lines: [
+      item.lines.single,
+      item.lines.single,
+    ], totalAmount: 10000000);
+    expect(() => service().recordPurchase(duplicate), throwsA(isA<ArgumentError>()));
+  });
+
 }
