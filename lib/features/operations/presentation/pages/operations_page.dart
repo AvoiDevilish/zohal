@@ -41,7 +41,7 @@ class _OperationsPageState extends State<OperationsPage> {
         appBar: AppBar(title: const Text('عملیات کسب‌وکار')),
         body: IndexedStack(
           index: tab,
-          children: const [_PurchasesTab(), _DeliveryTab(), _ReturnsTab(), _FinanceTab()],
+          children: [_PurchasesTab(initialSupplierId: widget.initialSupplierId), const _DeliveryTab(), const _ReturnsTab(), const _FinanceTab()],
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: tab,
@@ -59,7 +59,8 @@ class _OperationsPageState extends State<OperationsPage> {
 }
 
 class _PurchasesTab extends StatefulWidget {
-  const _PurchasesTab();
+  const _PurchasesTab({this.initialSupplierId});
+  final String? initialSupplierId;
   @override State<_PurchasesTab> createState() => _PurchasesTabState();
 }
 
@@ -187,115 +188,6 @@ class _PurchaseFormState extends State<_PurchaseForm> {
     final available = widget.items.where((x) => !used.contains(x.id));
     if (available.isEmpty) return;
     final item = available.first;
-    setState(() => rows.add(_PurchaseRow(itemId: item.id, q: TextEditingController(text: '1'), c: TextEditingController())));
-  }
-
-  InventoryItem item(_PurchaseRow row) => widget.items.firstWhere((x) => x.id == row.itemId);
-
-  int get total => rows.fold(0, (sum, row) =>
-      sum + ((double.tryParse(row.q.text.replaceAll(',', '.')) ?? 0) * (int.tryParse(row.c.text.replaceAll(',', '')) ?? 0)).round());
-
-  void save() {
-    final supplier = widget.suppliers.firstWhere((x) => x.id == supplierId);
-    final lines = <PurchaseLine>[];
-    for (final row in rows) {
-      final q = double.tryParse(row.q.text);
-      final c = int.tryParse(row.c.text.replaceAll(',', ''));
-      if (q == null || q <= 0 || c == null || c <= 0) return;
-      final x = item(row);
-      final factor = row.unit == x.unit
-          ? 1.0
-          : x.unitConversions.firstWhere((conversion) => conversion.unit == row.unit).toBaseFactor;
-      lines.add(PurchaseLine(
-        itemId: x.id,
-        itemName: x.name,
-        itemType: x.type.key,
-        quantity: q * factor,
-        unit: x.unit,
-        unitCost: (c / factor).round(),
-      ));
-    }
-    if (lines.isEmpty) return;
-    Navigator.pop(context, Purchase(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      supplierId: supplier.id, supplierName: supplier.name, createdAt: DateTime.now(),
-      lines: lines, totalAmount: total,
-    ));
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('خرید جدید')),
-    floatingActionButton: FloatingActionButton.extended(onPressed: save, icon: const Icon(Icons.check), label: const Text('ثبت خرید')),
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      children: [
-        DropdownButtonFormField<String>(
-          initialValue: supplierId,
-          decoration: const InputDecoration(labelText: 'تأمین‌کننده'),
-          items: widget.suppliers.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
-          onChanged: (v) { if (v != null) setState(() => supplierId = v); },
-        ),
-        const SizedBox(height: 18),
-        Row(children: [
-          const Expanded(child: Text('اقلام خرید', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900))),
-          OutlinedButton.icon(onPressed: rows.length < widget.items.length ? _add : null, icon: const Icon(Icons.add), label: const Text('قلم')),
-        ]),
-        ...List.generate(rows.length, (index) {
-          final row = rows[index];
-          final x = item(row);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: ZohalCard(child: Column(children: [
-              Row(children: [
-                Expanded(child: DropdownButtonFormField<String>(
-                  initialValue: row.itemId, isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'قلم انبار'),
-                  items: widget.items.map((i) => DropdownMenuItem(value: i.id, child: Text(i.name, overflow: TextOverflow.ellipsis))).toList(),
-                  onChanged: (v) { if (v != null) setState(() => row.itemId = v); },
-                )),
-                if (rows.length > 1) IconButton(onPressed: () { final r = rows.removeAt(index); r.q.dispose(); r.c.dispose(); setState(() {}); }, icon: const Icon(Icons.delete_outline)),
-              ]),
-              const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: TextField(controller: row.q, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(labelText: 'مقدار ' + x.unit), onChanged: (_) => setState(() {}))),
-                const SizedBox(width: 10),
-                Expanded(child: TextField(controller: row.c, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'قیمت واحد', suffixText: 'تومان'), onChanged: (_) => setState(() {}))),
-              ]),
-            ])),
-          );
-        }),
-        const Divider(height: 30),
-        Row(children: [
-          const Expanded(child: Text('جمع خرید', style: TextStyle(fontWeight: FontWeight.w900))),
-          Text(PersianNumberFormatter.money(total), style: const TextStyle(fontWeight: FontWeight.w900)),
-        ]),
-      ],
-    ),
-  );
-}
-
-class _PurchaseForm extends StatefulWidget {
-  const _PurchaseForm({required this.suppliers, required this.items});
-  final List<Supplier> suppliers;
-  final List<InventoryItem> items;
-  @override State<_PurchaseForm> createState() => _PurchaseFormState();
-}
-
-class _PurchaseFormState extends State<_PurchaseForm> {
-  late String supplierId;
-  final rows = <_PurchaseRow>[];
-
-  @override
-  void initState() { super.initState(); supplierId = widget.suppliers.first.id; _add(); }
-  @override
-  void dispose() { for (final x in rows) { x.q.dispose(); x.c.dispose(); } super.dispose(); }
-
-  void _add() {
-    final used = rows.map((x) => x.itemId).toSet();
-    final available = widget.items.where((x) => !used.contains(x.id));
-    if (available.isEmpty) return;
-    final item = available.first;
     setState(() => rows.add(_PurchaseRow(itemId: item.id, unit: item.unit, q: TextEditingController(text: '1'), c: TextEditingController())));
   }
 
@@ -369,15 +261,17 @@ class _PurchaseFormState extends State<_PurchaseForm> {
               Row(children: [
                 Expanded(child: TextField(controller: row.q, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'مقدار'), onChanged: (_) => setState(() {}))),
                 const SizedBox(width: 10),
-                Expanded(child: DropdownButtonFormField<String>(
-                  initialValue: row.unit,
-                  decoration: const InputDecoration(labelText: 'واحد'),
-                  items: [
-                    DropdownMenuItem(value: x.unit, child: Text(x.unit)),
-                    ...x.unitConversions.map((conversion) => DropdownMenuItem(value: conversion.unit, child: Text(conversion.unit))),
-                  ],
-                  onChanged: (value) { if (value != null) setState(() => row.unit = value); },
-                )),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: row.unit,
+                    decoration: const InputDecoration(labelText: 'واحد'),
+                    items: [
+                      DropdownMenuItem(value: x.unit, child: Text(x.unit)),
+                      ...x.unitConversions.map((u) => DropdownMenuItem(value: u.unit, child: Text(u.unit))),
+                    ],
+                    onChanged: (v) { if (v != null) setState(() => row.unit = v); },
+                  ),
+                ),
                 const SizedBox(width: 10),
                 Expanded(child: TextField(controller: row.c, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'قیمت واحد', suffixText: 'تومان'), onChanged: (_) => setState(() {}))),
               ]),
@@ -392,14 +286,6 @@ class _PurchaseFormState extends State<_PurchaseForm> {
       ],
     ),
   );
-}
-
-class _PurchaseRow {
-  _PurchaseRow({required this.itemId, required this.unit, required this.q, required this.c});
-  String itemId;
-  String unit;
-  final TextEditingController q;
-  final TextEditingController c;
 }
 
 class _DeliveryTab extends StatefulWidget {
