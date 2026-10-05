@@ -15,8 +15,10 @@ class ProductionBatchStore {
   Future<List<ProductionBatch>> getAll() async {
     final prefs = await SharedPreferences.getInstance();
 
-    if (prefs.getString(_key) == null) {
-      final legacyData = prefs.getStringList(_key);
+    final storedValue = prefs.get(_key);
+
+    if (storedValue is List<String>) {
+      final legacyData = storedValue;
       if (legacyData != null) {
         final rows = legacyData
             .map((item) => Map<String, dynamic>.from(jsonDecode(item) as Map))
