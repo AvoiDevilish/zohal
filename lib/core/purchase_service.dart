@@ -154,7 +154,15 @@ class PurchaseService {
 
     final now = DateTime.now();
     final supplierAccountId = 'supplier-' + purchase.supplierId;
-    final supplierBalanceBeforeReturn = await financialStore.getBalance(supplierAccountId);
+    final returnTransactionId = 'purchase-return-' + returnId;
+    final existingReturnTransaction =
+        await financialStore.getTransaction(returnTransactionId);
+    final supplierBalanceAfterReturn = await financialStore.getBalance(
+      supplierAccountId,
+    );
+    final supplierBalanceBeforeReturn = existingReturnTransaction == null
+        ? supplierBalanceAfterReturn
+        : supplierBalanceAfterReturn - total;
     final creditCreated = supplierBalanceBeforeReturn >= 0
         ? total
         : (total + supplierBalanceBeforeReturn).clamp(0, total);
