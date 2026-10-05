@@ -99,6 +99,8 @@ class CostConsumptionService {
         totalCost: allocation.totalCost,
         referenceId: referenceId,
         createdAt: now,
+        sourceLotNumber: layer.lotNumber,
+        sourceExpiryDate: layer.expiryDate,
       );
       await allocationStore.add(weightedAllocation);
       return CostConsumptionResult(
@@ -136,6 +138,8 @@ class CostConsumptionService {
           totalCost: allocation.totalCost,
           referenceId: referenceId,
           createdAt: now,
+          sourceLotNumber: layer.lotNumber,
+          sourceExpiryDate: layer.expiryDate,
         ),
       );
     }
