@@ -758,10 +758,18 @@ void main() {
 
   test('rejects duplicate purchase line items', () async {
     final item = purchase();
-    final duplicate = item.copyWith(lines: [
-      item.lines.single,
-      item.lines.single,
-    ], totalAmount: 10000000);
+    final duplicate = Purchase(
+      id: item.id,
+      supplierId: item.supplierId,
+      supplierName: item.supplierName,
+      createdAt: item.createdAt,
+      lines: [
+        item.lines.single,
+        item.lines.single,
+      ],
+      totalAmount: 10000000,
+      note: item.note,
+    );
     expect(() => service().recordPurchase(duplicate), throwsA(isA<ArgumentError>()));
   });
 
