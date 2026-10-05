@@ -23,9 +23,13 @@ class ProductionCostStore {
     final existing = await getByProductionId(cost.productionId);
     if (existing != null) {
       if (!_same(existing, cost)) {
-        throw StateError('Production cost "${cost.productionId}" already exists with different data.');
+        throw StateError(
+          'Production cost "${cost.productionId}" already exists with different data.',
+        );
       }
-      return;
+      throw StateError(
+        'Production cost "${cost.productionId}" already exists.',
+      );
     }
     final costs = await getAll();
     costs.add(cost);
