@@ -9,6 +9,8 @@ class CostAllocation {
   final double totalCost;
   final String referenceId;
   final DateTime createdAt;
+  final String? sourceLotNumber;
+  final DateTime? sourceExpiryDate;
 
   const CostAllocation({
     required this.id,
@@ -21,6 +23,8 @@ class CostAllocation {
     required this.totalCost,
     required this.referenceId,
     required this.createdAt,
+    this.sourceLotNumber,
+    this.sourceExpiryDate,
   });
 
   Map<String, dynamic> toMap() {
@@ -35,6 +39,8 @@ class CostAllocation {
       'totalCost': totalCost,
       'referenceId': referenceId,
       'createdAt': createdAt.toIso8601String(),
+      'sourceLotNumber': sourceLotNumber,
+      'sourceExpiryDate': sourceExpiryDate?.toIso8601String(),
     };
   }
 
@@ -50,6 +56,10 @@ class CostAllocation {
       totalCost: (map['totalCost'] as num).toDouble(),
       referenceId: map['referenceId'] as String,
       createdAt: DateTime.parse(map['createdAt'] as String),
+      sourceLotNumber: map['sourceLotNumber'] as String?,
+      sourceExpiryDate: map['sourceExpiryDate'] == null
+          ? null
+          : DateTime.parse(map['sourceExpiryDate'] as String),
     );
   }
 }
