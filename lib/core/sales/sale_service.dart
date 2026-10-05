@@ -64,6 +64,7 @@ class SaleExecutionResult {
     }
     return true;
   }
+}
 
 class SaleService {
   final SaleStore saleStore;
