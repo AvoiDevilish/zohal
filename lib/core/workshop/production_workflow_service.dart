@@ -2,6 +2,7 @@ import '../costing/cost_allocation_store.dart';
 import '../costing/production_cost.dart';
 import '../costing/production_cost_service.dart';
 import '../costing/production_cost_store.dart';
+import '../costing/costing_method.dart';
 import 'production_batch.dart';
 import 'production_batch_store.dart';
 import 'production_calculator.dart';
@@ -37,6 +38,7 @@ class ProductionWorkflowService {
   Future<ProductionWorkflowResult> execute({
     required ProductionBatch batch,
     required ProductionCalculation calculation,
+    CostingMethod costingMethod = CostingMethod.fifo,
   }) async {
     final execution = await productionService.executeBatch(
       batch: batch,
@@ -54,6 +56,7 @@ class ProductionWorkflowService {
       cost = await productionCostService.calculate(
         productionId: batch.id,
         calculation: calculation,
+        method: costingMethod,
       );
     }
 
