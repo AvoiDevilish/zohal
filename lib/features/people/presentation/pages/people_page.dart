@@ -5,6 +5,8 @@ import '../../../../core/sales/customer.dart';
 import '../../../../core/sales/customer_store.dart';
 import '../../../../core/sales/supplier.dart';
 import '../../../../core/sales/supplier_store.dart';
+import '../../../../core/people/person.dart';
+import '../../../../core/people/person_store.dart';
 import '../../../../core/widgets/zohal_card.dart';
 import 'person_profile_page.dart';
 
@@ -44,64 +46,101 @@ class _PeoplePageState extends State<PeoplePage> {
   }
 
   Future<void> addPerson() async {
-    if (tab == 0) {
-      final value = await showDialog<Customer>(
-        context: context,
-        builder: (_) => const _CustomerDialog(),
-      );
-      if (value != null) await _customerStore.upsert(value);
-    } else {
-      final value = await showDialog<Supplier>(
-        context: context,
-        builder: (_) => const _SupplierDialog(),
-      );
-      if (value != null) await _supplierStore.upsert(value);
-    }
+    final draft = await showDialog<_PersonDraft>(
+      context: context,
+      builder: (_) => const _PersonDialog(),
+    );
+    if (draft == null) return;
+    await _savePerson(draft);
     await load();
+  }
+
+  Future<void> _savePerson(_PersonDraft draft) async {
+    final id = draft.id ?? DateTime.now().microsecondsSinceEpoch.toString();
+    final current = await PersonStore.instance.getById(id);
+    final roles = <PersonRole>{
+      if (draft.customer) PersonRole.customer,
+      if (draft.supplier) PersonRole.supplier,
+    };
+    if (roles.isEmpty) return;
+
+    await PersonStore.instance.upsert(Person(
+      id: id,
+      name: draft.name,
+      roles: roles,
+      phone: draft.phone,
+      notes: draft.notes,
+      isActive: draft.isActive,
+    ));
+
+    if (draft.customer) {
+      await _customerStore.upsert(Customer(
+        id: id,
+        name: draft.name,
+        phone: draft.phone,
+        notes: draft.notes,
+        isActive: draft.isActive,
+      ));
+    } else if (current?.isCustomer == true) {
+      await _customerStore.setActive(id, false);
+    }
+
+    if (draft.supplier) {
+      await _supplierStore.upsert(Supplier(
+        id: id,
+        name: draft.name,
+        phone: draft.phone,
+        notes: draft.notes,
+        isActive: draft.isActive,
+      ));
+    } else if (current?.isSupplier == true) {
+      await _supplierStore.setActive(id, false);
+    }
   }
 
   Future<void> editCustomer(Customer value) async {
-    final updated = await showDialog<Customer>(
-      context: context,
-      builder: (_) => _CustomerDialog(existing: value),
-    );
-    if (updated != null) await _customerStore.upsert(updated);
-    await load();
+    await _editPerson(value.id);
   }
 
   Future<void> editSupplier(Supplier value) async {
-    final updated = await showDialog<Supplier>(
+    await _editPerson(value.id);
+  }
+
+  Future<void> _editPerson(String id) async {
+    final person = await PersonStore.instance.getById(id);
+    if (person == null) return;
+    final draft = await showDialog<_PersonDraft>(
       context: context,
-      builder: (_) => _SupplierDialog(existing: value),
+      builder: (_) => _PersonDialog(
+        existingId: person.id,
+        name: person.name,
+        phone: person.phone,
+        notes: person.notes,
+        customer: person.isCustomer,
+        supplier: person.isSupplier,
+        isActive: person.isActive,
+      ),
     );
-    if (updated != null) await _supplierStore.upsert(updated);
+    if (draft == null) return;
+    await _savePerson(draft);
     await load();
   }
 
-  Future<void> deactivateCustomer(Customer value) async {
-    final updated = Customer(
-      id: value.id,
-      name: value.name,
-      phone: value.phone,
-      notes: value.notes,
-      isActive: false,
-    );
-    await _customerStore.upsert(updated);
+  Future<void> deactivatePerson(String id) async {
+    final person = await PersonStore.instance.getById(id);
+    if (person == null) return;
+    await PersonStore.instance.upsert(person.copyWith(isActive: false));
+    if (person.isCustomer) await _customerStore.setActive(id, false);
+    if (person.isSupplier) await _supplierStore.setActive(id, false);
     await load();
   }
 
-  Future<void> deactivateSupplier(Supplier value) async {
-    await _supplierStore.deactivate(value.id);
-    await load();
-  }
-
-  Future<void> activateCustomer(Customer value) async {
-    await _customerStore.setActive(value.id, true);
-    await load();
-  }
-
-  Future<void> activateSupplier(Supplier value) async {
-    await _supplierStore.setActive(value.id, true);
+  Future<void> activatePerson(String id) async {
+    final person = await PersonStore.instance.getById(id);
+    if (person == null) return;
+    await PersonStore.instance.upsert(person.copyWith(isActive: true));
+    if (person.isCustomer) await _customerStore.setActive(id, true);
+    if (person.isSupplier) await _supplierStore.setActive(id, true);
     await load();
   }
 
@@ -194,15 +233,15 @@ class _PeoplePageState extends State<PeoplePage> {
                                   builder: (_) => PersonProfilePage(
                                     personId: person.id,
                                     name: person.name,
-                                    type: PersonType.customer,
+                                    type: person.isSupplier ? PersonType.both : PersonType.customer,
                                     phone: person.phone,
                                     notes: person.notes,
                                   ),
                                 )),
                                 onEdit: () => editCustomer(person),
                                 onDeactivate: showInactive
-                                    ? () => activateCustomer(person)
-                                    : () => deactivateCustomer(person),
+                                    ? () => activatePerson(person.id)
+                                    : () => deactivatePerson(person.id),
                                 actionLabel: showInactive ? 'فعال کردن' : 'غیرفعال کردن',
                               );
                             }
@@ -216,15 +255,15 @@ class _PeoplePageState extends State<PeoplePage> {
                                 builder: (_) => PersonProfilePage(
                                   personId: person.id,
                                   name: person.name,
-                                  type: PersonType.supplier,
+                                  type: person.isCustomer ? PersonType.both : PersonType.supplier,
                                   phone: person.phone,
                                   notes: person.notes,
                                 ),
                               )),
                               onEdit: () => editSupplier(person),
                               onDeactivate: showInactive
-                                  ? () => activateSupplier(person)
-                                  : () => deactivateSupplier(person),
+                                  ? () => activatePerson(person.id)
+                                  : () => deactivatePerson(person.id),
                               actionLabel: showInactive ? 'فعال کردن' : 'غیرفعال کردن',
                             );
                           },
@@ -293,27 +332,46 @@ class _PersonCard extends StatelessWidget {
   }
 }
 
-class _CustomerDialog extends StatefulWidget {
-  const _CustomerDialog({this.existing});
 
-  final Customer? existing;
+class _PersonDialog extends StatefulWidget {
+  const _PersonDialog({
+    this.existingId,
+    this.name = '',
+    this.phone,
+    this.notes,
+    this.customer = true,
+    this.supplier = false,
+    this.isActive = true,
+  });
+
+  final String? existingId;
+  final String name;
+  final String? phone;
+  final String? notes;
+  final bool customer;
+  final bool supplier;
+  final bool isActive;
 
   @override
-  State<_CustomerDialog> createState() => _CustomerDialogState();
+  State<_PersonDialog> createState() => _PersonDialogState();
 }
 
-class _CustomerDialogState extends State<_CustomerDialog> {
+class _PersonDialogState extends State<_PersonDialog> {
   final key = GlobalKey<FormState>();
   late final TextEditingController name;
   late final TextEditingController phone;
   late final TextEditingController notes;
+  late bool customer;
+  late bool supplier;
 
   @override
   void initState() {
     super.initState();
-    name = TextEditingController(text: widget.existing?.name ?? '');
-    phone = TextEditingController(text: widget.existing?.phone ?? '');
-    notes = TextEditingController(text: widget.existing?.notes ?? '');
+    name = TextEditingController(text: widget.name);
+    phone = TextEditingController(text: widget.phone ?? '');
+    notes = TextEditingController(text: widget.notes ?? '');
+    customer = widget.customer;
+    supplier = widget.supplier;
   }
 
   @override
@@ -325,16 +383,17 @@ class _CustomerDialogState extends State<_CustomerDialog> {
   }
 
   void save() {
-    if (!key.currentState!.validate()) return;
+    if (!key.currentState!.validate() || (!customer && !supplier)) return;
     Navigator.pop(
       context,
-      Customer(
-        id: widget.existing?.id ??
-            DateTime.now().microsecondsSinceEpoch.toString(),
+      _PersonDraft(
+        id: widget.existingId,
         name: name.text.trim(),
         phone: phone.text.trim().isEmpty ? null : phone.text.trim(),
         notes: notes.text.trim().isEmpty ? null : notes.text.trim(),
-        isActive: widget.existing?.isActive ?? true,
+        customer: customer,
+        supplier: supplier,
+        isActive: widget.isActive,
       ),
     );
   }
@@ -342,7 +401,7 @@ class _CustomerDialogState extends State<_CustomerDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.existing == null ? 'افزودن مشتری' : 'ویرایش مشتری'),
+      title: Text(widget.existingId == null ? 'افزودن شخص' : 'ویرایش شخص'),
       content: Form(
         key: key,
         child: SingleChildScrollView(
@@ -352,9 +411,9 @@ class _CustomerDialogState extends State<_CustomerDialog> {
               TextFormField(
                 controller: name,
                 autofocus: true,
-                decoration: const InputDecoration(labelText: 'نام مشتری'),
+                decoration: const InputDecoration(labelText: 'نام'),
                 validator: (value) => value == null || value.trim().isEmpty
-                    ? 'نام مشتری را وارد کنید'
+                    ? 'نام را وارد کنید'
                     : null,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -368,111 +427,55 @@ class _CustomerDialogState extends State<_CustomerDialog> {
                 controller: notes,
                 decoration: const InputDecoration(labelText: 'یادداشت'),
               ),
+              const SizedBox(height: AppSpacing.sm),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: customer,
+                title: const Text('مشتری'),
+                onChanged: (value) => setState(() => customer = value ?? false),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: supplier,
+                title: const Text('تأمین‌کننده'),
+                onChanged: (value) => setState(() => supplier = value ?? false),
+              ),
+              if (!customer && !supplier)
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'حداقل یک نقش را انتخاب کنید.',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
             ],
           ),
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('انصراف'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
         FilledButton(onPressed: save, child: const Text('ذخیره')),
       ],
     );
   }
 }
 
-class _SupplierDialog extends StatefulWidget {
-  const _SupplierDialog({this.existing});
+class _PersonDraft {
+  const _PersonDraft({
+    this.id,
+    required this.name,
+    this.phone,
+    this.notes,
+    required this.customer,
+    required this.supplier,
+    required this.isActive,
+  });
 
-  final Supplier? existing;
-
-  @override
-  State<_SupplierDialog> createState() => _SupplierDialogState();
-}
-
-class _SupplierDialogState extends State<_SupplierDialog> {
-  final key = GlobalKey<FormState>();
-  late final TextEditingController name;
-  late final TextEditingController phone;
-  late final TextEditingController notes;
-
-  @override
-  void initState() {
-    super.initState();
-    name = TextEditingController(text: widget.existing?.name ?? '');
-    phone = TextEditingController(text: widget.existing?.phone ?? '');
-    notes = TextEditingController(text: widget.existing?.notes ?? '');
-  }
-
-  @override
-  void dispose() {
-    name.dispose();
-    phone.dispose();
-    notes.dispose();
-    super.dispose();
-  }
-
-  void save() {
-    if (!key.currentState!.validate()) return;
-    Navigator.pop(
-      context,
-      Supplier(
-        id: widget.existing?.id ??
-            DateTime.now().microsecondsSinceEpoch.toString(),
-        name: name.text.trim(),
-        phone: phone.text.trim().isEmpty ? null : phone.text.trim(),
-        notes: notes.text.trim().isEmpty ? null : notes.text.trim(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(
-        widget.existing == null
-            ? 'افزودن تأمین‌کننده'
-            : 'ویرایش تأمین‌کننده',
-      ),
-      content: Form(
-        key: key,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: name,
-                autofocus: true,
-                decoration:
-                    const InputDecoration(labelText: 'نام تأمین‌کننده'),
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'نام تأمین‌کننده را وارد کنید'
-                    : null,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextField(
-                controller: phone,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'تلفن'),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextField(
-                controller: notes,
-                decoration: const InputDecoration(labelText: 'یادداشت'),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('انصراف'),
-        ),
-        FilledButton(onPressed: save, child: const Text('ذخیره')),
-      ],
-    );
-  }
+  final String? id;
+  final String name;
+  final String? phone;
+  final String? notes;
+  final bool customer;
+  final bool supplier;
+  final bool isActive;
 }
