@@ -111,6 +111,7 @@ void main() {
       ],
       quantity: 3000,
       method: CostingMethod.fefo,
+      now: DateTime(2026, 1, 1),
     );
 
     expect(result.allocations, hasLength(1));
@@ -157,6 +158,7 @@ void main() {
       ],
       quantity: 3000,
       method: CostingMethod.fefo,
+      now: DateTime(2026, 1, 1),
     );
 
     expect(result.allocations, hasLength(2));
@@ -288,6 +290,7 @@ void main() {
       ],
       quantity: 1000,
       method: CostingMethod.fefo,
+      now: DateTime(2026, 1, 1),
     );
 
     expect(result.allocations.first.layerId, 'dated');
