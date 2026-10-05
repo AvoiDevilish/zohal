@@ -575,6 +575,152 @@ void main() {
     expect(await service().getSupplierCredit('supplier-1'), 1000000);
   });
 
+  test('recovers supplier payment when financial transaction already exists', () async {
+    await service().recordPurchase(purchase());
+
+    final now = DateTime(2026, 10, 5);
+    await finance.ensureAccount(
+      const FinancialAccount(
+        id: 'cash',
+        name: 'صندوق',
+        type: FinancialAccountType.cash,
+      ),
+    );
+    await finance.addTransaction(
+      FinancialTransaction(
+        id: 'supplier-payment-payment-recovery',
+        createdAt: now,
+        type: 'supplierPayment',
+        referenceId: 'payment-recovery',
+        entries: [
+          const FinancialEntry(
+            accountId: 'supplier-supplier-1',
+            amount: 2000000,
+            isDebit: true,
+          ),
+          const FinancialEntry(
+            accountId: 'cash',
+            amount: 2000000,
+            isDebit: false,
+          ),
+        ],
+      ),
+    );
+
+    final result = await service().recordSupplierPayment(
+      paymentId: 'payment-recovery',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 2000000,
+    );
+
+    expect(result.id, 'supplier-payment-payment-recovery');
+    expect((await finance.getTransactions()).length, 2);
+    expect(await finance.getBalance('supplier-supplier-1'), -3000000);
+    expect(await finance.getBalance('cash'), -2000000);
+  });
+
+  test('recovers supplier credit allocation when allocation was already persisted', () async {
+    final item = purchase();
+    await service().recordPurchase(item);
+    await service().recordSupplierPayment(
+      paymentId: 'payment-allocation-recovery',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 5000000,
+    );
+    await service().returnPurchase(
+      purchase: item,
+      returnId: 'return-allocation-recovery',
+      quantities: {'raw_date_khesht': 4},
+    );
+
+    final laterPurchase = purchase(
+      id: 'purchase-allocation-recovery',
+      totalAmount: 3000000,
+      quantity: 6,
+    );
+    await service().recordPurchase(laterPurchase);
+
+    await creditAllocations.add(
+      SupplierCreditAllocation(
+        id: 'allocation-recovery',
+        purchaseId: laterPurchase.id,
+        supplierId: 'supplier-1',
+        amount: 1500000,
+        createdAt: DateTime(2026, 10, 5),
+      ),
+    );
+
+    final result = await service().applySupplierCredit(
+      allocationId: 'allocation-recovery',
+      purchaseId: laterPurchase.id,
+      supplierId: 'supplier-1',
+      amount: 1500000,
+    );
+
+    expect(result.id, 'allocation-recovery');
+    expect(await service().getSupplierCredit('supplier-1'), 500000);
+    expect((await creditAllocations.getAll()).length, 1);
+  });
+
+  test('recovers supplier credit settlement when financial transaction exists but settlement record is missing', () async {
+    final item = purchase();
+    await service().recordPurchase(item);
+    await service().recordSupplierPayment(
+      paymentId: 'payment-settlement-recovery',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 5000000,
+    );
+    await service().returnPurchase(
+      purchase: item,
+      returnId: 'return-settlement-recovery',
+      quantities: {'raw_date_khesht': 4},
+    );
+
+    final now = DateTime(2026, 10, 5);
+    await finance.ensureAccount(
+      const FinancialAccount(
+        id: 'cash',
+        name: 'صندوق',
+        type: FinancialAccountType.cash,
+      ),
+    );
+    await finance.addTransaction(
+      FinancialTransaction(
+        id: 'supplier-credit-settlement-settlement-recovery',
+        createdAt: now,
+        type: 'supplierCreditSettlement',
+        referenceId: 'settlement-recovery',
+        entries: [
+          const FinancialEntry(
+            accountId: 'cash',
+            amount: 1000000,
+            isDebit: true,
+          ),
+          const FinancialEntry(
+            accountId: 'supplier-supplier-1',
+            amount: 1000000,
+            isDebit: false,
+          ),
+        ],
+      ),
+    );
+
+    final result = await service().settleSupplierCredit(
+      settlementId: 'settlement-recovery',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 1000000,
+    );
+
+    expect(result.id, 'supplier-credit-settlement-settlement-recovery');
+    expect((await creditSettlements.getAll()).single.amount, 1000000);
+    expect(await service().getSupplierCredit('supplier-1'), 1000000);
+    expect((await finance.getTransactions()).length, 3);
+  });
+
   test('supplier credit settlement cannot exceed available credit', () async {
     await service().recordPurchase(purchase());
     await service().recordSupplierPayment(
