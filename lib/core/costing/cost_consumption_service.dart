@@ -33,7 +33,72 @@ class CostConsumptionService {
     required this.allocationStore,
   });
 
-  /// Validates a consumption request without persisting allocations or changing layer balances.\n  /// This is used by the production workflow as a costing preflight so an\n  /// expired/insufficient FEFO request cannot consume inventory first.\n  Future<CostCalculation> preview({\n    required String referenceId,\n    required String materialId,\n    required double quantity,\n    CostingMethod method = CostingMethod.fifo,\n    bool allowExpiredLots = false,\n    DateTime? now,\n  }) async {\n    if (referenceId.trim().isEmpty) {\n      throw ArgumentError('referenceId نمی‌تواند خالی باشد.');\n    }\n    if (quantity <= 0) {\n      throw ArgumentError('مقدار مصرف باید بیشتر از صفر باشد.');\n    }\n\n    final existing = await allocationStore.getAllocations(\n      referenceId: referenceId,\n      materialId: materialId,\n    );\n\n    if (existing.isNotEmpty) {\n      final existingQuantity =\n          existing.fold(0.0, (sum, item) => sum + item.quantity);\n      if ((existingQuantity - quantity).abs() > 0.000001) {\n        throw StateError(\n          'مصرف "$referenceId" قبلاً با مقدار متفاوتی ثبت شده است.',\n        );\n      }\n\n      return CostCalculation(\n        requestedQuantity: existingQuantity,\n        totalCost: existing.fold(0.0, (sum, item) => sum + item.totalCost),\n        allocations: List.unmodifiable(\n          existing\n              .map(\n                (item) => EngineAllocation(\n                  layerId: item.costLayerId,\n                  quantity: item.quantity,\n                  unitCost: item.unitCost,\n                ),\n              )\n              .toList(),\n        ),\n      );\n    }\n\n    final layers = await costLayerStore.getLayers(materialId: materialId);\n    if (layers.isEmpty) {\n      throw StateError(\n        'هیچ Cost Layer فعالی برای ماده "$materialId" وجود ندارد.',\n      );\n    }\n\n    return const CostingEngine().calculate(\n      layers: layers,\n      quantity: quantity,\n      method: method,\n      allowExpiredLots: allowExpiredLots,\n      now: now,\n    );\n  }\n\n  Future<CostConsumptionResult> consume({
+  /// Validates a consumption request without persisting allocations or changing layer balances.
+  /// This is used by the production workflow as a costing preflight so an
+  /// expired/insufficient FEFO request cannot consume inventory first.
+  Future<CostCalculation> preview({
+    required String referenceId,
+    required String materialId,
+    required double quantity,
+    CostingMethod method = CostingMethod.fifo,
+    bool allowExpiredLots = false,
+    DateTime? now,
+  }) async {
+    if (referenceId.trim().isEmpty) {
+      throw ArgumentError('referenceId نمی‌تواند خالی باشد.');
+    }
+    if (quantity <= 0) {
+      throw ArgumentError('مقدار مصرف باید بیشتر از صفر باشد.');
+    }
+
+    final existing = await allocationStore.getAllocations(
+      referenceId: referenceId,
+      materialId: materialId,
+    );
+
+    if (existing.isNotEmpty) {
+      final existingQuantity =
+          existing.fold(0.0, (sum, item) => sum + item.quantity);
+      if ((existingQuantity - quantity).abs() > 0.000001) {
+        throw StateError(
+          'مصرف "$referenceId" قبلاً با مقدار متفاوتی ثبت شده است.',
+        );
+      }
+
+      return CostCalculation(
+        requestedQuantity: existingQuantity,
+        totalCost: existing.fold(0.0, (sum, item) => sum + item.totalCost),
+        allocations: List.unmodifiable(
+          existing
+              .map(
+                (item) => EngineAllocation(
+                  layerId: item.costLayerId,
+                  quantity: item.quantity,
+                  unitCost: item.unitCost,
+                ),
+              )
+              .toList(),
+        ),
+      );
+    }
+
+    final layers = await costLayerStore.getLayers(materialId: materialId);
+    if (layers.isEmpty) {
+      throw StateError(
+        'هیچ Cost Layer فعالی برای ماده "$materialId" وجود ندارد.',
+      );
+    }
+
+    return const CostingEngine().calculate(
+      layers: layers,
+      quantity: quantity,
+      method: method,
+      allowExpiredLots: allowExpiredLots,
+      now: now,
+    );
+  }
+
+  Future<CostConsumptionResult> consume({
     required String referenceId,
     required String materialId,
     required double quantity,
