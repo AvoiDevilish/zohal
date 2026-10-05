@@ -33,8 +33,9 @@ class ProductionWorkflowService {
     CostAllocationStore? costAllocationStore,
   }) : costAllocationStore = costAllocationStore ?? CostAllocationStore.instance;
 
-  /// Inventory is executed before costing so failed stock checks cannot consume
-  /// Cost Layers. Both phases are retry-safe.
+  /// Costing is preflighted before inventory so an invalid FEFO request
+  /// cannot consume inventory first. Durable costing is then persisted only
+  /// after inventory execution succeeds; retries remain idempotent.
   Future<ProductionWorkflowResult> execute({
     required ProductionBatch batch,
     required ProductionCalculation calculation,
@@ -42,6 +43,17 @@ class ProductionWorkflowService {
     bool allowExpiredLots = false,
     DateTime? now,
   }) async {
+    var cost = await productionCostStore.getByProductionId(batch.id);
+    if (cost == null) {
+      await productionCostService.validate(
+        productionId: batch.id,
+        calculation: calculation,
+        method: costingMethod,
+        allowExpiredLots: allowExpiredLots,
+        now: now,
+      );
+    }
+
     final execution = await productionService.executeBatch(
       batch: batch,
       calculation: calculation,
@@ -53,7 +65,6 @@ class ProductionWorkflowService {
       );
     }
 
-    var cost = await productionCostStore.getByProductionId(batch.id);
     if (cost == null) {
       cost = await productionCostService.calculate(
         productionId: batch.id,
