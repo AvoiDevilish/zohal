@@ -55,6 +55,9 @@ class SalesReturnService {
       if (existingReturn.deliveryId != sourceDelivery.id) {
         throw StateError('شناسه برگشت برای تحویل دیگری استفاده شده است.');
       }
+      if (!_sameReturnRequest(existingReturn, quantities)) {
+        throw StateError('شناسه برگشت قبلاً با اطلاعات متفاوتی استفاده شده است.');
+      }
 
       // Reconcile a return that was persisted before its financial entry.
       await financialService.postSaleReturn(
@@ -167,5 +170,15 @@ class SalesReturnService {
     );
 
     return SalesReturnResult(salesReturn: salesReturn, changed: true);
+  bool _sameReturnRequest(SalesReturn existing, Map<String, int> quantities) {
+    if (existing.lines.length != quantities.length) return false;
+    for (final entry in quantities.entries) {
+      final line = existing.lines.cast<SalesReturnLine?>().firstWhere(
+            (item) => item?.productVariantId == entry.key,
+            orElse: () => null,
+          );
+      if (line == null || line.quantity != entry.value) return false;
+    }
+    return true;
   }
 }
