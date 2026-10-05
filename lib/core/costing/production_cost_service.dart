@@ -13,6 +13,8 @@ class ProductionCostService {
     required String productionId,
     required ProductionCalculation calculation,
     CostingMethod method = CostingMethod.fifo,
+    bool allowExpiredLots = false,
+    DateTime? now,
   }) async {
     var materialCost = 0.0;
     var packagingCost = 0.0;
@@ -24,6 +26,8 @@ class ProductionCostService {
         materialId: requirement.materialId,
         quantity: requirement.quantity,
         method: method,
+        allowExpiredLots: allowExpiredLots,
+        now: now,
       );
 
       switch (requirement.type) {
