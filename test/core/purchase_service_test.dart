@@ -208,6 +208,30 @@ void main() {
     expect((await finance.getTransactions()).length, 2);
   });
 
+  test('supplier payment with same id but different payload is rejected', () async {
+    await service().recordPurchase(purchase());
+
+    await service().recordSupplierPayment(
+      paymentId: 'payment-conflict',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 2000000,
+    );
+
+    expect(
+      () => service().recordSupplierPayment(
+        paymentId: 'payment-conflict',
+        supplierId: 'supplier-1',
+        supplierName: 'تأمین‌کننده آزمایشی',
+        amount: 1000000,
+      ),
+      throwsA(isA<StateError>()),
+    );
+
+    expect(await finance.getBalance('supplier-supplier-1'), -3000000);
+    expect(await finance.getBalance('cash'), -2000000);
+  });
+
   test('supplier payment cannot exceed payable', () async {
     await service().recordPurchase(purchase());
 
@@ -451,6 +475,45 @@ void main() {
     expect((await creditAllocations.getAll()).length, 1);
   });
 
+  test('supplier credit allocation with same id but different amount is rejected', () async {
+    await service().recordPurchase(purchase());
+    await service().recordSupplierPayment(
+      paymentId: 'payment-full',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 5000000,
+    );
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-credit',
+      quantities: {'raw_date_khesht': 4},
+    );
+
+    final laterPurchase = purchase(
+      id: 'purchase-2',
+      totalAmount: 3000000,
+      quantity: 6,
+    );
+    await service().recordPurchase(laterPurchase);
+
+    await service().applySupplierCredit(
+      allocationId: 'allocation-conflict',
+      purchaseId: laterPurchase.id,
+      supplierId: 'supplier-1',
+      amount: 1500000,
+    );
+
+    expect(
+      () => service().applySupplierCredit(
+        allocationId: 'allocation-conflict',
+        purchaseId: laterPurchase.id,
+        supplierId: 'supplier-1',
+        amount: 500000,
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('supplier credit can be settled back as cash', () async {
     await service().recordPurchase(purchase());
     await service().recordSupplierPayment(
@@ -476,6 +539,40 @@ void main() {
     expect(await finance.getBalance('supplier-supplier-1'), 1000000);
     expect(await finance.getBalance('cash'), -4000000);
     expect((await creditSettlements.getAll()).single.amount, 1000000);
+  });
+
+  test('supplier credit settlement with same id but different amount is rejected', () async {
+    await service().recordPurchase(purchase());
+    await service().recordSupplierPayment(
+      paymentId: 'payment-full',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 5000000,
+    );
+    await service().returnPurchase(
+      purchase: purchase(),
+      returnId: 'return-credit',
+      quantities: {'raw_date_khesht': 4},
+    );
+
+    await service().settleSupplierCredit(
+      settlementId: 'settlement-conflict',
+      supplierId: 'supplier-1',
+      supplierName: 'تأمین‌کننده آزمایشی',
+      amount: 1000000,
+    );
+
+    expect(
+      () => service().settleSupplierCredit(
+        settlementId: 'settlement-conflict',
+        supplierId: 'supplier-1',
+        supplierName: 'تأمین‌کننده آزمایشی',
+        amount: 500000,
+      ),
+      throwsA(isA<StateError>()),
+    );
+
+    expect(await service().getSupplierCredit('supplier-1'), 1000000);
   });
 
   test('supplier credit settlement cannot exceed available credit', () async {
