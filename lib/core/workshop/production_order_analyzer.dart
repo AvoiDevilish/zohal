@@ -3,6 +3,7 @@ import '../products/product_variant.dart';
 import '../sales/sales_order.dart';
 import '../sales/product_variant.dart' as sales;
 import '../sales/product_variant_store.dart';
+import '../sales/product_variant_catalog.dart';
 import 'nut_allocation.dart';
 import 'production_calculator.dart';
 import 'production_inventory_checker.dart';
@@ -56,10 +57,10 @@ class ProductionOrderAnalyzer {
 
     for (final line in order.lines) {
       final storedProduct = await ProductVariantStore.instance.getById(line.productVariantId);
-      if (storedProduct == null) {
-        throw StateError('محصول «${line.productName}» با شناسه ${line.productVariantId} در کاتالوگ فروش پیدا نشد.');
-      }
-      final product = _toProductionProduct(storedProduct);
+      final product = storedProduct != null
+          ? _toProductionProduct(storedProduct)
+          : _toProductionProductFromLegacyCatalog(line);
+
       final recipe = RecipeCatalog.buildRecipeFor(product);
 
       final calculation = const ProductionCalculator().calculate(
@@ -108,6 +109,14 @@ class ProductionOrderAnalyzer {
       stockCheck: aggregateStockCheck,
       byproducts: _aggregateByproducts(lineAnalyses),
     );
+  }
+
+  ProductVariant _toProductionProductFromLegacyCatalog(SalesOrderLine line) {
+    final legacy = initialProductVariants.where((x) => x.id == line.productVariantId);
+    if (legacy.isEmpty) {
+      throw StateError('محصول «'+line.productName+'» با شناسه '+line.productVariantId+' در کاتالوگ فروش پیدا نشد.');
+    }
+    return _toProductionProduct(legacy.first);
   }
 
   ProductVariant _toProductionProduct(sales.ProductVariant product) {
