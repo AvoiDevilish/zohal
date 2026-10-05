@@ -17,54 +17,7 @@ class SaleExecutionResult {
   });
 
   double get totalAmount => sale.totalAmount;
-  List<InventoryMovement> _buildMovements(Sale sale) {
-    return sale.items.map((item) {
-      return InventoryMovement(
-        id: 'sale-' + sale.id + '-' + item.productVariantId,
-        itemId: item.productVariantId,
-        itemName: item.productName,
-        itemType: 'finishedProduct',
-        quantity: item.quantity.toDouble(),
-        unit: 'عدد',
-        movementType: InventoryMovementType.sale,
-        timestamp: sale.saleDate,
-        referenceId: sale.id,
-        note: sale.note,
-      );
-    }).toList();
-  }
 
-  bool _sameMovement(InventoryMovement left, InventoryMovement right) {
-    return left.itemId == right.itemId &&
-        left.itemName == right.itemName &&
-        left.movementType == right.movementType &&
-        (left.quantity - right.quantity).abs() <= 0.000001 &&
-        left.unit == right.unit &&
-        left.referenceId == right.referenceId;
-  }
-
-  bool _sameSale(Sale left, Sale right) {
-    if (left.id != right.id ||
-        left.customerId != right.customerId ||
-        left.customerName != right.customerName ||
-        left.saleDate != right.saleDate ||
-        left.note != right.note ||
-        left.items.length != right.items.length) {
-      return false;
-    }
-    for (var index = 0; index < left.items.length; index++) {
-      final a = left.items[index];
-      final b = right.items[index];
-      if (a.productVariantId != b.productVariantId ||
-          a.productName != b.productName ||
-          (a.quantity - b.quantity).abs() > 0.000001 ||
-          a.unitPrice != b.unitPrice) {
-        return false;
-      }
-    }
-    return true;
-  }
-}
 
 class SaleService {
   final SaleStore saleStore;
@@ -151,4 +104,52 @@ class SaleService {
 
     return SaleExecutionResult(sale: sale, movements: movements);
   }
+  List<InventoryMovement> _buildMovements(Sale sale) {
+    return sale.items.map((item) {
+      return InventoryMovement(
+        id: 'sale-' + sale.id + '-' + item.productVariantId,
+        itemId: item.productVariantId,
+        itemName: item.productName,
+        itemType: 'finishedProduct',
+        quantity: item.quantity.toDouble(),
+        unit: 'عدد',
+        movementType: InventoryMovementType.sale,
+        timestamp: sale.saleDate,
+        referenceId: sale.id,
+        note: sale.note,
+      );
+    }).toList();
+  }
+
+  bool _sameMovement(InventoryMovement left, InventoryMovement right) {
+    return left.itemId == right.itemId &&
+        left.itemName == right.itemName &&
+        left.movementType == right.movementType &&
+        (left.quantity - right.quantity).abs() <= 0.000001 &&
+        left.unit == right.unit &&
+        left.referenceId == right.referenceId;
+  }
+
+  bool _sameSale(Sale left, Sale right) {
+    if (left.id != right.id ||
+        left.customerId != right.customerId ||
+        left.customerName != right.customerName ||
+        left.saleDate != right.saleDate ||
+        left.note != right.note ||
+        left.items.length != right.items.length) {
+      return false;
+    }
+    for (var index = 0; index < left.items.length; index++) {
+      final a = left.items[index];
+      final b = right.items[index];
+      if (a.productVariantId != b.productVariantId ||
+          a.productName != b.productName ||
+          (a.quantity - b.quantity).abs() > 0.000001 ||
+          a.unitPrice != b.unitPrice) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
 }
