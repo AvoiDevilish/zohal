@@ -161,7 +161,7 @@ void main() {
       delivery: delivery(),
       returnId: salesReturn.id,
       customerName: 'مشتری آزمایشی',
-      quantities: {'energy-bar-100g-ginger': 99},
+      quantities: {'energy-bar-100g-ginger': 2},
     );
 
     expect(result.changed, isFalse);
