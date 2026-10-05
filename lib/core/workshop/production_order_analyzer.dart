@@ -3,7 +3,6 @@ import '../products/product_variant.dart';
 import '../sales/sales_order.dart';
 import '../sales/product_variant.dart' as sales;
 import '../sales/product_variant_store.dart';
-import '../sales/product_variant_catalog.dart';
 import 'nut_allocation.dart';
 import 'production_calculator.dart';
 import 'production_inventory_checker.dart';
@@ -56,7 +55,8 @@ class ProductionOrderAnalyzer {
     final lineAnalyses = <ProductionOrderLineAnalysis>[];
 
     for (final line in order.lines) {
-      final storedProduct = await ProductVariantStore.instance.getById(line.productVariantId);
+      final storedProduct =
+          await ProductVariantStore.instance.getById(line.productVariantId);
       final product = storedProduct != null
           ? _toProductionProduct(storedProduct)
           : _toProductionProductFromLegacyCatalog(line);
@@ -115,11 +115,13 @@ class ProductionOrderAnalyzer {
     final flavor = switch (line.flavor) {
       'زنجبیلی' || 'زنجبیل' => ProductFlavor.ginger,
       'آرد نخودچی' => ProductFlavor.chickpeaFlour,
-      'ساده (پودر نشاسته ذرت)' || 'نشاسته' || 'نشاسته ذرت' => ProductFlavor.cornStarch,
+      'ساده (پودر نشاسته ذرت)' || 'نشاسته' || 'نشاسته ذرت' =>
+        ProductFlavor.cornStarch,
       _ => ProductFlavor.ginger,
     };
 
-    final weight = RegExp(r'(\\d+)').firstMatch(line.packageLabel)?.group(1);
+    final weight =
+        RegExp(r'(\d+)').firstMatch(line.packageLabel)?.group(1);
     final weightGrams = int.tryParse(weight ?? '') ?? 100;
 
     return ProductVariant(
@@ -131,13 +133,6 @@ class ProductionOrderAnalyzer {
       sku: line.productVariantId,
     );
   }
-  ProductVariant _toProductionProductFromLegacyCatalog(SalesOrderLine line) {
-    final legacy = initialProductVariants.where((x) => x.id == line.productVariantId);
-    if (legacy.isEmpty) {
-      throw StateError('محصول «'+line.productName+'» با شناسه '+line.productVariantId+' در کاتالوگ فروش پیدا نشد.');
-    }
-    return _toProductionProduct(legacy.first);
-  }
 
   ProductVariant _toProductionProduct(sales.ProductVariant product) {
     final flavorText = product.flavor.trim();
@@ -146,7 +141,8 @@ class ProductionOrderAnalyzer {
       'آرد نخودچی' => ProductFlavor.chickpeaFlour,
       'ساده (پودر نشاسته ذرت)' || 'نشاسته' => ProductFlavor.cornStarch,
       _ => throw StateError(
-          'برای طعم/مدل «$flavorText» فرمول تولید تعریف نشده است. یکی از طعم‌های پشتیبانی‌شده را انتخاب کنید.',
+          'برای طعم/مدل «' + flavorText + '» فرمول تولید تعریف نشده است. '
+          'یکی از طعم‌های پشتیبانی‌شده را انتخاب کنید.',
         ),
     };
 
