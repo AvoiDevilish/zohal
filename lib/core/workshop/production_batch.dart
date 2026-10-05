@@ -51,6 +51,9 @@ class ProductionBatch {
   final ProductionBatchStatus status;
   final String? note;
   final String? cancellationReason;
+  final String? lotNumber;
+  final DateTime? expiryDate;
+  final List<String> sourceLotNumbers;
 
   const ProductionBatch({
     required this.id,
@@ -64,6 +67,9 @@ class ProductionBatch {
     this.status = ProductionBatchStatus.draft,
     this.note,
     this.cancellationReason,
+    this.lotNumber,
+    this.expiryDate,
+    this.sourceLotNumbers = const [],
   });
 
   int get totalWeightGrams => units * unitWeightGrams;
@@ -80,6 +86,9 @@ class ProductionBatch {
     ProductionBatchStatus? status,
     String? note,
     String? cancellationReason,
+    String? lotNumber,
+    DateTime? expiryDate,
+    List<String>? sourceLotNumbers,
     bool clearNote = false,
     bool clearCancellationReason = false,
   }) {
@@ -97,6 +106,9 @@ class ProductionBatch {
       cancellationReason: clearCancellationReason
           ? null
           : (cancellationReason ?? this.cancellationReason),
+      lotNumber: lotNumber ?? this.lotNumber,
+      expiryDate: expiryDate ?? this.expiryDate,
+      sourceLotNumbers: sourceLotNumbers ?? this.sourceLotNumbers,
     );
   }
 
@@ -113,6 +125,9 @@ class ProductionBatch {
       'status': status.key,
       'note': note,
       'cancellationReason': cancellationReason,
+      'lotNumber': lotNumber,
+      'expiryDate': expiryDate?.toIso8601String(),
+      'sourceLotNumbers': sourceLotNumbers,
     };
   }
 
@@ -131,6 +146,14 @@ class ProductionBatch {
       ),
       note: map['note'] as String?,
       cancellationReason: map['cancellationReason'] as String?,
+      lotNumber: map['lotNumber'] as String?,
+      expiryDate: map['expiryDate'] == null
+          ? null
+          : DateTime.parse(map['expiryDate'] as String),
+      sourceLotNumbers: (map['sourceLotNumbers'] as List?)
+              ?.whereType<String>()
+              .toList(growable: false) ??
+          const [],
     );
   }
 }
