@@ -39,6 +39,8 @@ class ProductionWorkflowService {
     required ProductionBatch batch,
     required ProductionCalculation calculation,
     CostingMethod costingMethod = CostingMethod.fifo,
+    bool allowExpiredLots = false,
+    DateTime? now,
   }) async {
     final execution = await productionService.executeBatch(
       batch: batch,
@@ -57,6 +59,8 @@ class ProductionWorkflowService {
         productionId: batch.id,
         calculation: calculation,
         method: costingMethod,
+        allowExpiredLots: allowExpiredLots,
+        now: now,
       );
     }
 
