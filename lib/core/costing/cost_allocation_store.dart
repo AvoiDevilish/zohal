@@ -54,7 +54,9 @@ class CostAllocationStore {
           (existing.quantity - allocation.quantity).abs() > 0.000001 ||
           (existing.unitCost - allocation.unitCost).abs() > 0.000001 ||
           (existing.totalCost - allocation.totalCost).abs() > 0.000001 ||
-          existing.referenceId != allocation.referenceId) {
+          existing.referenceId != allocation.referenceId ||
+          existing.sourceLotNumber != allocation.sourceLotNumber ||
+          existing.sourceExpiryDate != allocation.sourceExpiryDate) {
         throw StateError(
           'Cost allocation "${allocation.id}" already exists with different data.',
         );
