@@ -1,66 +1,48 @@
-import 'dart:convert';
-
-import 'package:shared_preferences/shared_preferences.dart';
-
+import '../storage/local_store.dart';
 import 'production_cost.dart';
 
 class ProductionCostStore {
   ProductionCostStore._();
-
   static final ProductionCostStore instance = ProductionCostStore._();
-
   static const _key = 'production_costs';
 
   Future<List<ProductionCost>> getAll() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final data = prefs.getStringList(_key) ?? [];
-
-    return data
-        .map(
-          (item) => ProductionCost.fromMap(
-            Map<String, dynamic>.from(jsonDecode(item) as Map),
-          ),
-        )
-        .toList();
+    final rows = await LocalStore.instance.readList(_key);
+    return rows.map(ProductionCost.fromMap).toList();
   }
 
   Future<ProductionCost?> getByProductionId(String productionId) async {
     final costs = await getAll();
-
     for (final cost in costs) {
-      if (cost.productionId == productionId) {
-        return cost;
-      }
+      if (cost.productionId == productionId) return cost;
     }
-
     return null;
   }
 
   Future<void> add(ProductionCost cost) async {
     final existing = await getByProductionId(cost.productionId);
-
     if (existing != null) {
-      throw StateError(
-        'Production cost "${cost.productionId}" already exists.',
-      );
+      if (!_same(existing, cost)) {
+        throw StateError('Production cost "${cost.productionId}" already exists with different data.');
+      }
+      return;
     }
-
     final costs = await getAll();
-
     costs.add(cost);
-
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setStringList(
+    await LocalStore.instance.writeList(
       _key,
-      costs.map((item) => jsonEncode(item.toMap())).toList(),
+      costs.map((item) => item.toMap()).toList(),
     );
   }
 
-  Future<void> clear() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.remove(_key);
+  bool _same(ProductionCost left, ProductionCost right) {
+    return left.productionId == right.productionId &&
+        (left.materialCost - right.materialCost).abs() <= 0.000001 &&
+        (left.packagingCost - right.packagingCost).abs() <= 0.000001 &&
+        (left.consumableCost - right.consumableCost).abs() <= 0.000001 &&
+        (left.totalCost - right.totalCost).abs() <= 0.000001 &&
+        left.outputQuantity == right.outputQuantity;
   }
+
+  Future<void> clear() async => LocalStore.instance.remove(_key);
 }
