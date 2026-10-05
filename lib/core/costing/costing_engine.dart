@@ -42,6 +42,8 @@ class CostingEngine {
     required List<CostLayer> layers,
     required double quantity,
     CostingMethod method = CostingMethod.fifo,
+    bool allowExpiredLots = false,
+    DateTime? now,
   }) {
     if (quantity <= 0) {
       throw ArgumentError('Requested quantity must be greater than zero.');
@@ -71,6 +73,8 @@ class CostingEngine {
         return _calculateFefo(
           layers: availableLayers,
           quantity: quantity,
+          allowExpiredLots: allowExpiredLots,
+          now: now ?? DateTime.now(),
         );
 
       case CostingMethod.weightedAverage:
@@ -130,8 +134,21 @@ class CostingEngine {
   CostCalculation _calculateFefo({
     required List<CostLayer> layers,
     required double quantity,
+    required bool allowExpiredLots,
+    required DateTime now,
   }) {
-    final sortedLayers = [...layers]
+    final eligibleLayers = allowExpiredLots
+        ? layers
+        : layers.where((layer) {
+            final expiry = layer.expiryDate;
+            return expiry == null || !expiry.isBefore(now);
+          }).toList();
+
+    if (eligibleLayers.isEmpty) {
+      throw StateError('No non-expired cost layers available for FEFO.');
+    }
+
+    final sortedLayers = [...eligibleLayers]
       ..sort((a, b) {
         final aExpiry = a.expiryDate;
         final bExpiry = b.expiryDate;
