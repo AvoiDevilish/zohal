@@ -166,6 +166,140 @@ void main() {
     expect(result.allocations[1].quantity, 1000);
   });
 
+  test('FEFO rejects expired lots by default', () {
+    final now = DateTime(2026, 7, 1);
+
+    expect(
+      () => engine.calculate(
+        layers: [
+          CostLayer(
+            id: 'expired',
+            materialId: 'date',
+            materialName: 'خرما',
+            quantity: 5000,
+            remainingQuantity: 5000,
+            unit: 'گرم',
+            unitCost: 100,
+            createdAt: DateTime(2026, 1, 1),
+            lotNumber: 'LOT-EXPIRED',
+            expiryDate: DateTime(2026, 6, 30),
+          ),
+          CostLayer(
+            id: 'valid',
+            materialId: 'date',
+            materialName: 'خرما',
+            quantity: 5000,
+            remainingQuantity: 5000,
+            unit: 'گرم',
+            unitCost: 160,
+            createdAt: DateTime(2026, 1, 2),
+            lotNumber: 'LOT-VALID',
+            expiryDate: DateTime(2026, 12, 31),
+          ),
+        ],
+        quantity: 3000,
+        method: CostingMethod.fefo,
+        now: now,
+      ),
+      isNot(throwsA(anything)),
+    );
+
+    final result = engine.calculate(
+      layers: [
+        CostLayer(
+          id: 'expired',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 5000,
+          remainingQuantity: 5000,
+          unit: 'گرم',
+          unitCost: 100,
+          createdAt: DateTime(2026, 1, 1),
+          lotNumber: 'LOT-EXPIRED',
+          expiryDate: DateTime(2026, 6, 30),
+        ),
+        CostLayer(
+          id: 'valid',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 5000,
+          remainingQuantity: 5000,
+          unit: 'گرم',
+          unitCost: 160,
+          createdAt: DateTime(2026, 1, 2),
+          lotNumber: 'LOT-VALID',
+          expiryDate: DateTime(2026, 12, 31),
+        ),
+      ],
+      quantity: 3000,
+      method: CostingMethod.fefo,
+      now: now,
+    );
+
+    expect(result.allocations, hasLength(1));
+    expect(result.allocations.first.layerId, 'valid');
+  });
+
+  test('FEFO allows expired lots only with explicit override', () {
+    final result = engine.calculate(
+      layers: [
+        CostLayer(
+          id: 'expired',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 5000,
+          remainingQuantity: 5000,
+          unit: 'گرم',
+          unitCost: 100,
+          createdAt: DateTime(2026, 1, 1),
+          expiryDate: DateTime(2026, 6, 30),
+        ),
+        CostLayer(
+          id: 'valid',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 5000,
+          remainingQuantity: 5000,
+          unit: 'گرم',
+          unitCost: 160,
+          createdAt: DateTime(2026, 1, 2),
+          expiryDate: DateTime(2026, 12, 31),
+        ),
+      ],
+      quantity: 3000,
+      method: CostingMethod.fefo,
+      allowExpiredLots: true,
+      now: DateTime(2026, 7, 1),
+    );
+
+    expect(result.allocations.first.layerId, 'expired');
+    expect(result.totalCost, 300000);
+  });
+
+  test('FEFO fails when only expired lots can satisfy the request', () {
+    expect(
+      () => engine.calculate(
+        layers: [
+          CostLayer(
+            id: 'expired',
+            materialId: 'date',
+            materialName: 'خرما',
+            quantity: 5000,
+            remainingQuantity: 5000,
+            unit: 'گرم',
+            unitCost: 100,
+            createdAt: DateTime(2026, 1, 1),
+            expiryDate: DateTime(2026, 6, 30),
+          ),
+        ],
+        quantity: 1000,
+        method: CostingMethod.fefo,
+        now: DateTime(2026, 7, 1),
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('FEFO puts lots without expiry after dated lots', () {
     final result = engine.calculate(
       layers: [
