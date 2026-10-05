@@ -111,11 +111,21 @@ void main() {
       customerName: 'مشتری آزمایشی',
       quantities: {'energy-bar-100g-ginger': 2},
     );
+    expect(
+      () => service().returnItems(
+        delivery: delivery(),
+        returnId: 'return-1',
+        customerName: 'مشتری دیگر',
+        quantities: {'energy-bar-100g-ginger': 5},
+      ),
+      throwsA(isA<StateError>()),
+    );
+
     final second = await service().returnItems(
       delivery: delivery(),
       returnId: 'return-1',
       customerName: 'مشتری دیگر',
-      quantities: {'energy-bar-100g-ginger': 5},
+      quantities: {'energy-bar-100g-ginger': 2},
     );
 
     expect(second.changed, isFalse);
