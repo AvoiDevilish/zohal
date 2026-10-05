@@ -162,10 +162,13 @@ void main() {
       returnId: 'return-purchase-1',
       quantities: {'raw_date_khesht': 2},
     );
-    await service().returnPurchase(
-      purchase: purchase(),
-      returnId: 'return-purchase-1',
-      quantities: {'raw_date_khesht': 5},
+    expect(
+      () => service().returnPurchase(
+        purchase: purchase(),
+        returnId: 'return-purchase-1',
+        quantities: {'raw_date_khesht': 5},
+      ),
+      throwsA(isA<StateError>()),
     );
 
     expect(await inventory.getStock('raw_date_khesht'), 8);
