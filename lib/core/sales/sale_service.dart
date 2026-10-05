@@ -17,7 +17,53 @@ class SaleExecutionResult {
   });
 
   double get totalAmount => sale.totalAmount;
-}
+  List<InventoryMovement> _buildMovements(Sale sale) {
+    return sale.items.map((item) {
+      return InventoryMovement(
+        id: 'sale-' + sale.id + '-' + item.productVariantId,
+        itemId: item.productVariantId,
+        itemName: item.productName,
+        itemType: 'finishedProduct',
+        quantity: item.quantity.toDouble(),
+        unit: 'عدد',
+        movementType: InventoryMovementType.sale,
+        timestamp: sale.saleDate,
+        referenceId: sale.id,
+        note: sale.note,
+      );
+    }).toList();
+  }
+
+  bool _sameMovement(InventoryMovement left, InventoryMovement right) {
+    return left.itemId == right.itemId &&
+        left.itemName == right.itemName &&
+        left.movementType == right.movementType &&
+        (left.quantity - right.quantity).abs() <= 0.000001 &&
+        left.unit == right.unit &&
+        left.referenceId == right.referenceId;
+  }
+
+  bool _sameSale(Sale left, Sale right) {
+    if (left.id != right.id ||
+        left.customerId != right.customerId ||
+        left.customerName != right.customerName ||
+        left.saleDate != right.saleDate ||
+        left.note != right.note ||
+        left.items.length != right.items.length) {
+      return false;
+    }
+    for (var index = 0; index < left.items.length; index++) {
+      final a = left.items[index];
+      final b = right.items[index];
+      if (a.productVariantId != b.productVariantId ||
+          a.productName != b.productName ||
+          (a.quantity - b.quantity).abs() > 0.000001 ||
+          a.unitPrice != b.unitPrice) {
+        return false;
+      }
+    }
+    return true;
+  }
 
 class SaleService {
   final SaleStore saleStore;
@@ -37,17 +83,40 @@ class SaleService {
     final existingSale = await saleStore.getById(sale.id);
 
     if (existingSale != null) {
+      if (!_sameSale(existingSale, sale)) {
+        throw StateError('شناسه فروش برای اطلاعات دیگری استفاده شده است.');
+      }
+
       final existingMovements = (await inventoryStore.getMovements())
-          .where(
-            (movement) =>
-                movement.referenceId == sale.id &&
-                movement.movementType == InventoryMovementType.sale,
-          )
+          .where((movement) =>
+              movement.referenceId == sale.id &&
+              movement.movementType == InventoryMovementType.sale)
+          .toList();
+
+      final expectedMovements = _buildMovements(existingSale);
+      final byId = {for (final movement in existingMovements) movement.id: movement};
+
+      for (final movement in expectedMovements) {
+        final current = byId[movement.id];
+        if (current != null && !_sameMovement(current, movement)) {
+          throw StateError('حرکت فروش با اطلاعات مورد انتظار همخوانی ندارد.');
+        }
+      }
+
+      final missing = expectedMovements.where((movement) => !byId.containsKey(movement.id)).toList();
+      if (missing.isNotEmpty) {
+        await inventoryStore.addMovements(missing);
+      }
+
+      final reconciledMovements = (await inventoryStore.getMovements())
+          .where((movement) =>
+              movement.referenceId == existingSale.id &&
+              movement.movementType == InventoryMovementType.sale)
           .toList();
 
       return SaleExecutionResult(
         sale: existingSale,
-        movements: existingMovements,
+        movements: reconciledMovements,
         alreadyExecuted: true,
       );
     }
@@ -72,36 +141,12 @@ class SaleService {
       }
     }
 
-    final stockByItem = await inventoryStore.getAllStocks();
+    final movements = _buildMovements(sale);
 
-    for (final item in sale.items) {
-      final available = stockByItem[item.productVariantId] ?? 0;
-
-      if (available < item.quantity) {
-        throw StateError(
-          'Insufficient stock for "${item.productName}". '
-          'Required: ${item.quantity}, available: $available.',
-        );
-      }
-    }
-
-    final movements = sale.items.map((item) {
-      return InventoryMovement(
-        id: 'sale-${sale.id}-${item.productVariantId}',
-        itemId: item.productVariantId,
-        itemName: item.productName,
-        itemType: 'finishedProduct',
-        quantity: item.quantity.toDouble(),
-        unit: 'عدد',
-        movementType: InventoryMovementType.sale,
-        timestamp: sale.saleDate,
-        referenceId: sale.id,
-        note: sale.note,
-      );
-    }).toList();
-
-    await saleStore.add(sale);
+    // Persist inventory before the sale record so a failed inventory write
+    // cannot leave a sale without its stock movements.
     await inventoryStore.addMovements(movements);
+    await saleStore.add(sale);
 
     return SaleExecutionResult(sale: sale, movements: movements);
   }
