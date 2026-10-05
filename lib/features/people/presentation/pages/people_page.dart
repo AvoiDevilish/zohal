@@ -233,7 +233,7 @@ class _PeoplePageState extends State<PeoplePage> {
                                   builder: (_) => PersonProfilePage(
                                     personId: person.id,
                                     name: person.name,
-                                    type: person.isSupplier ? PersonType.both : PersonType.customer,
+                                    type: PersonType.customer,
                                     phone: person.phone,
                                     notes: person.notes,
                                   ),
@@ -255,7 +255,7 @@ class _PeoplePageState extends State<PeoplePage> {
                                 builder: (_) => PersonProfilePage(
                                   personId: person.id,
                                   name: person.name,
-                                  type: person.isCustomer ? PersonType.both : PersonType.supplier,
+                                  type: PersonType.supplier,
                                   phone: person.phone,
                                   notes: person.notes,
                                 ),
