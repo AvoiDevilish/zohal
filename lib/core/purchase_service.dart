@@ -331,8 +331,9 @@ class PurchaseService {
     final existing = await allocationStore.getById(allocationId);
     if (existing != null) {
       if (existing.purchaseId != purchaseId ||
-          existing.supplierId != supplierId) {
-        throw StateError('شناسه تخصیص اعتبار برای مورد دیگری استفاده شده است.');
+          existing.supplierId != supplierId ||
+          existing.amount != amount) {
+        throw StateError('تخصیص اعتبار موجود با درخواست فعلی همخوانی ندارد.');
       }
       return existing;
     }
@@ -378,7 +379,28 @@ class PurchaseService {
     if (amount <= 0) throw ArgumentError('مبلغ پرداخت باید بیشتر از صفر باشد.');
     final transactionId = 'supplier-payment-' + paymentId;
     final existing = await financialStore.getTransaction(transactionId);
-    if (existing != null) return existing;
+    if (existing != null) {
+      final supplierAccountId = 'supplier-' + supplierId;
+      final matches = existing.referenceId == paymentId &&
+          existing.type == 'supplierPayment' &&
+          existing.entries.length == 2 &&
+          existing.entries.any(
+            (entry) =>
+                entry.accountId == supplierAccountId &&
+                entry.amount == amount &&
+                entry.isDebit,
+          ) &&
+          existing.entries.any(
+            (entry) =>
+                entry.accountId == 'cash' &&
+                entry.amount == amount &&
+                !entry.isDebit,
+          );
+      if (!matches) {
+        throw StateError('پرداخت تأمین‌کننده موجود با درخواست فعلی همخوانی ندارد.');
+      }
+      return existing;
+    }
 
     final supplierAccountId = 'supplier-' + supplierId;
     final outstanding = -await financialStore.getBalance(supplierAccountId);
@@ -439,8 +461,33 @@ class PurchaseService {
     final transactionId = 'supplier-credit-settlement-' + settlementId;
     final existing = await financialStore.getTransaction(transactionId);
     if (existing != null) {
+      final supplierAccountId = 'supplier-' + supplierId;
+      final matches = existing.referenceId == settlementId &&
+          existing.type == 'supplierCreditSettlement' &&
+          existing.entries.length == 2 &&
+          existing.entries.any(
+            (entry) =>
+                entry.accountId == 'cash' &&
+                entry.amount == amount &&
+                entry.isDebit,
+          ) &&
+          existing.entries.any(
+            (entry) =>
+                entry.accountId == supplierAccountId &&
+                entry.amount == amount &&
+                !entry.isDebit,
+          );
+      if (!matches) {
+        throw StateError('تسویه اعتبار موجود با درخواست فعلی همخوانی ندارد.');
+      }
+
       final settlementStore = SupplierCreditSettlementStore.instance;
       final existingSettlement = await settlementStore.getById(settlementId);
+      if (existingSettlement != null &&
+          (existingSettlement.supplierId != supplierId ||
+              existingSettlement.amount != amount)) {
+        throw StateError('رکورد تسویه اعتبار با درخواست فعلی همخوانی ندارد.');
+      }
       if (existingSettlement == null) {
         await settlementStore.add(
           SupplierCreditSettlement(
