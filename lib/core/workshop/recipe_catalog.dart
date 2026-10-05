@@ -26,6 +26,8 @@ class RecipeCatalog {
     'بادام زمینی',
   ];
 
+  static Recipe buildRecipeFor(ProductVariant product) => _buildRecipe(product);
+
   static List<Recipe> buildDefaultRecipes() {
     return ProductCatalog.buildDefaultVariants()
         .map(_buildRecipe)
@@ -43,9 +45,14 @@ class RecipeCatalog {
 
   static List<PackagingRule> packagingRulesFor(String productVariantId) {
     final product = ProductCatalog.findById(productVariantId);
+    return packagingRulesForProduct(product);
+  }
+
+  static List<PackagingRule> packagingRulesForProduct(ProductVariant product) {
 
     final containerId = switch (product.weightGrams) {
       100 => 'pack_container_100g',
+      400 => 'pack_container_400g',
       500 => 'pack_container_500g',
       1000 => 'pack_container_1kg',
       _ => throw StateError(
@@ -55,6 +62,7 @@ class RecipeCatalog {
 
     final containerName = switch (product.weightGrams) {
       100 => 'ظرف ۱۰۰ گرمی',
+      400 => 'ظرف ۴۰۰ گرمی',
       500 => 'ظرف ۵۰۰ گرمی',
       1000 => 'ظرف یک کیلویی',
       _ => throw StateError('بسته‌بندی نامعتبر است.'),
