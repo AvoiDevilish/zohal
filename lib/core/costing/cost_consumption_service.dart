@@ -38,6 +38,8 @@ class CostConsumptionService {
     required String materialId,
     required double quantity,
     CostingMethod method = CostingMethod.fifo,
+    bool allowExpiredLots = false,
+    DateTime? now,
   }) async {
     if (referenceId.trim().isEmpty) {
       throw ArgumentError('referenceId نمی‌تواند خالی باشد.');
@@ -82,6 +84,8 @@ class CostConsumptionService {
       layers: layers,
       quantity: quantity,
       method: method,
+      allowExpiredLots: allowExpiredLots,
+      now: now,
     );
 
     if (method == CostingMethod.weightedAverage) {
