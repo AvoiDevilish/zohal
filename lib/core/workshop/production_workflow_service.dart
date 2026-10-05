@@ -44,6 +44,13 @@ class ProductionWorkflowService {
     DateTime? now,
   }) async {
     var cost = await productionCostStore.getByProductionId(batch.id);
+    final persistedBatch = await productionBatchStore.getById(batch.id);
+    if (persistedBatch != null && !_sameBatchIdentity(persistedBatch, batch)) {
+      throw StateError(
+        'شناسه تولید "${batch.id}" قبلاً برای یک بچ متفاوت استفاده شده است.',
+      );
+    }
+
     if (cost == null) {
       await productionCostService.validate(
         productionId: batch.id,
@@ -91,14 +98,14 @@ class ProductionWorkflowService {
       sourceLotNumbers: sourceLots,
     );
 
-    final persistedBatch = await productionBatchStore.getById(batch.id);
-    if (persistedBatch == null) {
+    final storedBatch = await productionBatchStore.getById(batch.id);
+    if (storedBatch == null) {
       await productionBatchStore.add(traceableBatch);
-    } else if (persistedBatch.lotNumber != traceableBatch.lotNumber ||
-        persistedBatch.expiryDate != traceableBatch.expiryDate ||
-        !_sameList(persistedBatch.sourceLotNumbers, traceableBatch.sourceLotNumbers)) {
+    } else if (storedBatch.lotNumber != traceableBatch.lotNumber ||
+        storedBatch.expiryDate != traceableBatch.expiryDate ||
+        !_sameList(storedBatch.sourceLotNumbers, traceableBatch.sourceLotNumbers)) {
       await productionBatchStore.update(
-        persistedBatch.copyWith(
+        storedBatch.copyWith(
           lotNumber: traceableBatch.lotNumber,
           expiryDate: traceableBatch.expiryDate,
           sourceLotNumbers: traceableBatch.sourceLotNumbers,
@@ -123,6 +130,17 @@ class ProductionWorkflowService {
     );
 
     return ProductionWorkflowResult(execution: traceableExecution, cost: cost);
+  }
+
+  bool _sameBatchIdentity(ProductionBatch left, ProductionBatch right) {
+    return left.id == right.id &&
+        left.productVariantId == right.productVariantId &&
+        left.productName == right.productName &&
+        left.units == right.units &&
+        left.unitWeightGrams == right.unitWeightGrams &&
+        left.recipeId == right.recipeId &&
+        left.recipeVersion == right.recipeVersion &&
+        left.createdAt == right.createdAt;
   }
 
   bool _sameList(List<String> left, List<String> right) {
