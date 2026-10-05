@@ -9,7 +9,28 @@ class ProductionCostService {
 
   const ProductionCostService({required this.costConsumptionService});
 
-  /// Validates every material requirement without persisting costing state.\n  /// The production workflow runs this before inventory consumption.\n  Future<void> validate({\n    required String productionId,\n    required ProductionCalculation calculation,\n    CostingMethod method = CostingMethod.fifo,\n    bool allowExpiredLots = false,\n    DateTime? now,\n  }) async {\n    for (final requirement in calculation.requirements) {\n      await costConsumptionService.preview(\n        referenceId: '\$productionId-\${requirement.materialId}',\n        materialId: requirement.materialId,\n        quantity: requirement.quantity,\n        method: method,\n        allowExpiredLots: allowExpiredLots,\n        now: now,\n      );\n    }\n  }\n\n  Future<ProductionCost> calculate({
+  /// Validates every material requirement without persisting costing state.
+  /// The production workflow runs this before inventory consumption.
+  Future<void> validate({
+    required String productionId,
+    required ProductionCalculation calculation,
+    CostingMethod method = CostingMethod.fifo,
+    bool allowExpiredLots = false,
+    DateTime? now,
+  }) async {
+    for (final requirement in calculation.requirements) {
+      await costConsumptionService.preview(
+        referenceId: '$productionId-${requirement.materialId}',
+        materialId: requirement.materialId,
+        quantity: requirement.quantity,
+        method: method,
+        allowExpiredLots: allowExpiredLots,
+        now: now,
+      );
+    }
+  }
+
+  Future<ProductionCost> calculate({
     required String productionId,
     required ProductionCalculation calculation,
     CostingMethod method = CostingMethod.fifo,
