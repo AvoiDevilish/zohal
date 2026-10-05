@@ -137,7 +137,7 @@ class RecipeCatalog {
           type: RecipeComponentType.flavoring,
           percentage: 0.5,
         ),
-        ...packagingRulesFor(product.id).map(
+        ...packagingRulesForProduct(product).map(
           (rule) => RecipeComponent(
             materialId: rule.materialId,
             materialName: rule.materialName,
