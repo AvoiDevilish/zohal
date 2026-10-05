@@ -81,6 +81,119 @@ void main() {
     expect(result.averageUnitCost, 100);
   });
 
+  test('FEFO consumes the earliest expiring lot first', () {
+    final result = engine.calculate(
+      layers: [
+        CostLayer(
+          id: 'later-expiry',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 5000,
+          remainingQuantity: 5000,
+          unit: 'گرم',
+          unitCost: 100,
+          createdAt: DateTime(2026, 1, 1),
+          lotNumber: 'LOT-LATE',
+          expiryDate: DateTime(2026, 12, 31),
+        ),
+        CostLayer(
+          id: 'earlier-expiry',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 5000,
+          remainingQuantity: 5000,
+          unit: 'گرم',
+          unitCost: 160,
+          createdAt: DateTime(2026, 1, 10),
+          lotNumber: 'LOT-EARLY',
+          expiryDate: DateTime(2026, 6, 30),
+        ),
+      ],
+      quantity: 3000,
+      method: CostingMethod.fefo,
+    );
+
+    expect(result.allocations, hasLength(1));
+    expect(result.allocations.first.layerId, 'earlier-expiry');
+    expect(result.allocations.first.quantity, 3000);
+    expect(result.totalCost, 480000);
+  });
+
+  test('FEFO crosses expiry layers and uses creation time as tie breaker', () {
+    final result = engine.calculate(
+      layers: [
+        CostLayer(
+          id: 'tie-newer',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 2000,
+          remainingQuantity: 2000,
+          unit: 'گرم',
+          unitCost: 160,
+          createdAt: DateTime(2026, 1, 10),
+          expiryDate: DateTime(2026, 6, 30),
+        ),
+        CostLayer(
+          id: 'tie-older',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 2000,
+          remainingQuantity: 2000,
+          unit: 'گرم',
+          unitCost: 100,
+          createdAt: DateTime(2026, 1, 1),
+          expiryDate: DateTime(2026, 6, 30),
+        ),
+        CostLayer(
+          id: 'no-expiry',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 5000,
+          remainingQuantity: 5000,
+          unit: 'گرم',
+          unitCost: 200,
+          createdAt: DateTime(2025, 12, 1),
+        ),
+      ],
+      quantity: 3000,
+      method: CostingMethod.fefo,
+    );
+
+    expect(result.allocations, hasLength(2));
+    expect(result.allocations[0].layerId, 'tie-older');
+    expect(result.allocations[0].quantity, 2000);
+    expect(result.allocations[1].layerId, 'tie-newer');
+    expect(result.allocations[1].quantity, 1000);
+  });
+
+  test('FEFO puts lots without expiry after dated lots', () {
+    final result = engine.calculate(
+      layers: [
+        layer(
+          id: 'no-expiry',
+          quantity: 5000,
+          unitCost: 100,
+          createdAt: DateTime(2026, 1, 1),
+        ),
+        CostLayer(
+          id: 'dated',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 5000,
+          remainingQuantity: 5000,
+          unit: 'گرم',
+          unitCost: 160,
+          createdAt: DateTime(2026, 1, 10),
+          expiryDate: DateTime(2027, 1, 1),
+        ),
+      ],
+      quantity: 1000,
+      method: CostingMethod.fefo,
+    );
+
+    expect(result.allocations.first.layerId, 'dated');
+  });
+
   test('FIFO crosses layers when first layer is insufficient', () {
     final result = engine.calculate(
       layers: [
