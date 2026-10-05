@@ -67,6 +67,7 @@ void main() {
       recipeVersion: 1,
       createdAt: DateTime(2026, 1, 1),
       status: ProductionBatchStatus.ready,
+      expiryDate: DateTime(2026, 2, 1),
     );
   }
 
@@ -182,7 +183,11 @@ void main() {
     expect(result.cost.packagingCost, 5000);
     expect(result.cost.unitCost, 1500);
 
-    expect(await batchStore.getById(batch().id), isNotNull);
+    final persistedBatch = await batchStore.getById(batch().id);
+    expect(persistedBatch, isNotNull);
+    expect(persistedBatch!.lotNumber, 'LOT-${batch().id}');
+    expect(persistedBatch.expiryDate, DateTime(2026, 2, 1));
+    expect(persistedBatch.sourceLotNumbers, ['LOT-DATE-001']);
     expect(await costStore.getByProductionId(batch().id), isNotNull);
 
     final movements = await inventoryStore.getMovements();
