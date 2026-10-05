@@ -38,7 +38,11 @@ void main() {
     });
 
     test('serializes and restores all fields', () {
-      final batch = buildBatch(note: 'تولید آزمایشی');
+      final batch = buildBatch(note: 'تولید آزمایشی').copyWith(
+        lotNumber: 'LOT-001',
+        expiryDate: DateTime(2026, 12, 31),
+        sourceLotNumbers: const ['RAW-001', 'RAW-002'],
+      );
 
       final restored = ProductionBatch.fromMap(batch.toMap());
 
@@ -53,6 +57,9 @@ void main() {
       expect(restored.createdAt, batch.createdAt);
       expect(restored.status, batch.status);
       expect(restored.note, batch.note);
+      expect(restored.lotNumber, 'LOT-001');
+      expect(restored.expiryDate, DateTime(2026, 12, 31));
+      expect(restored.sourceLotNumbers, ['RAW-001', 'RAW-002']);
     });
 
     test('supports copyWith', () {
