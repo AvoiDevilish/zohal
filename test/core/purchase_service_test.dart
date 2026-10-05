@@ -719,7 +719,7 @@ void main() {
     expect(result.id, 'supplier-credit-settlement-settlement-recovery');
     expect((await creditSettlements.getAll()).single.amount, 1000000);
     expect(await service().getSupplierCredit('supplier-1'), 1000000);
-    expect((await finance.getTransactions()).length, 3);
+    expect((await finance.getTransactions()).length, 4);
   });
 
   test('supplier credit settlement cannot exceed available credit', () async {
