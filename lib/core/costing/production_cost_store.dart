@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../storage/local_store.dart';
 import 'production_cost.dart';
 
@@ -7,6 +11,15 @@ class ProductionCostStore {
   static const _key = 'production_costs';
 
   Future<List<ProductionCost>> getAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedValue = prefs.get(_key);
+    if (storedValue is List<String>) {
+      final rows = storedValue
+          .map((item) => Map<String, dynamic>.from(jsonDecode(item) as Map))
+          .toList();
+      await LocalStore.instance.writeList(_key, rows);
+    }
+
     final rows = await LocalStore.instance.readList(_key);
     return rows.map(ProductionCost.fromMap).toList();
   }
