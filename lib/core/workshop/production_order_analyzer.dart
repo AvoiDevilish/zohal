@@ -1,6 +1,8 @@
 import '../inventory/inventory_store.dart';
 import '../products/product_catalog.dart';
 import '../sales/sales_order.dart';
+import '../sales/product_variant.dart' as sales;
+import '../sales/product_variant_store.dart';
 import 'nut_allocation.dart';
 import 'production_calculator.dart';
 import 'production_inventory_checker.dart';
@@ -53,8 +55,12 @@ class ProductionOrderAnalyzer {
     final lineAnalyses = <ProductionOrderLineAnalysis>[];
 
     for (final line in order.lines) {
-      final product = ProductCatalog.findById(line.productVariantId);
-      final recipe = RecipeCatalog.findByProductVariantId(product.id);
+      final storedProduct = await ProductVariantStore.instance.getById(line.productVariantId);
+      if (storedProduct == null) {
+        throw StateError('محصول «${line.productName}» با شناسه ${line.productVariantId} در کاتالوگ فروش پیدا نشد.');
+      }
+      final product = _toProductionProduct(storedProduct);
+      final recipe = RecipeCatalog.buildRecipeFor(product);
 
       final calculation = const ProductionCalculator().calculate(
         recipe: recipe,
@@ -101,6 +107,27 @@ class ProductionOrderAnalyzer {
       lines: List.unmodifiable(lineAnalyses),
       stockCheck: aggregateStockCheck,
       byproducts: _aggregateByproducts(lineAnalyses),
+    );
+  }
+
+  ProductVariant _toProductionProduct(sales.ProductVariant product) {
+    final flavorText = product.flavor.trim();
+    final flavor = switch (flavorText) {
+      'زنجبیل' => ProductFlavor.ginger,
+      'آرد نخودچی' => ProductFlavor.chickpeaFlour,
+      'ساده (پودر نشاسته ذرت)' || 'نشاسته' => ProductFlavor.cornStarch,
+      _ => throw StateError(
+          'برای طعم/مدل «$flavorText» فرمول تولید تعریف نشده است. یکی از طعم‌های پشتیبانی‌شده را انتخاب کنید.',
+        ),
+    };
+
+    return ProductVariant(
+      id: product.id,
+      baseProductId: 'stored-product',
+      name: product.displayName,
+      weightGrams: product.packageGrams,
+      flavor: flavor,
+      sku: product.id,
     );
   }
 
