@@ -12,7 +12,8 @@ import '../../../../core/utils/persian_number_formatter.dart';
 import '../../../people/presentation/pages/people_page.dart';
 
 class SalesOrderPage extends StatefulWidget {
-  const SalesOrderPage({super.key});
+  const SalesOrderPage({super.key, this.initialCustomerId});
+  final String? initialCustomerId;
 
   @override
   State<SalesOrderPage> createState() => _SalesOrderPageState();
@@ -66,6 +67,7 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
         builder: (_) => _NewOrderPage(
           products: products,
           customers: customers,
+          initialCustomerId: widget.initialCustomerId,
         ),
       ),
     );
@@ -138,9 +140,10 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
 }
 
 class _NewOrderPage extends StatefulWidget {
-  const _NewOrderPage({required this.products, required this.customers});
+  const _NewOrderPage({required this.products, required this.customers, this.initialCustomerId});
   final List<ProductVariant> products;
   final List<Customer> customers;
+  final String? initialCustomerId;
   @override State<_NewOrderPage> createState() => _NewOrderPageState();
 }
 
@@ -151,7 +154,9 @@ class _NewOrderPageState extends State<_NewOrderPage> {
   @override
   void initState() {
     super.initState();
-    customerId = widget.customers.first.id;
+    customerId = widget.customers.any((x) => x.id == widget.initialCustomerId)
+        ? widget.initialCustomerId!
+        : widget.customers.first.id;
     _addLine();
   }
 
