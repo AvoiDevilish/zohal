@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/design/app_spacing.dart';
+import '../../../../core/inventory/inventory_item.dart';
 import '../../../../core/inventory/inventory_item_store.dart';
 import '../../../../core/inventory/inventory_movement.dart';
 import '../../../../core/inventory/inventory_store.dart';
@@ -56,6 +57,16 @@ class _InventoryPageState extends State<InventoryPage> {
 
   int get _reservedItemCount => _reservedStocks.keys.length;
 
+  Future<void> _openAddItem() async {
+    final item = await showDialog<InventoryItem>(
+      context: context,
+      builder: (_) => const _InventoryItemDialog(),
+    );
+    if (item == null) return;
+    await _itemStore.upsert(item);
+    await _loadInventory();
+  }
+
   Future<void> _openAddMovement() async {
     final result = await showDialog<InventoryMovement>(
       context: context,
@@ -85,7 +96,12 @@ class _InventoryPageState extends State<InventoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('انبار')),
+      appBar: AppBar(
+        title: const Text('انبار'),
+        actions: [
+          IconButton(onPressed: _openAddItem, icon: const Icon(Icons.add_box_outlined), tooltip: 'قلم جدید'),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddMovement,
         icon: const Icon(Icons.add),
@@ -485,4 +501,80 @@ class _AddMovementDialogState extends State<_AddMovementDialog> {
       ],
     );
   }
+}
+
+
+class _InventoryItemDialog extends StatefulWidget {
+  const _InventoryItemDialog();
+
+  @override
+  State<_InventoryItemDialog> createState() => _InventoryItemDialogState();
+}
+
+class _InventoryItemDialogState extends State<_InventoryItemDialog> {
+  final formKey = GlobalKey<FormState>();
+  final name = TextEditingController();
+  final unit = TextEditingController(text: 'عدد');
+  final minimum = TextEditingController(text: '0');
+  InventoryItemType type = InventoryItemType.rawMaterial;
+
+  @override
+  void dispose() {
+    name.dispose();
+    unit.dispose();
+    minimum.dispose();
+    super.dispose();
+  }
+
+  void save() {
+    if (!formKey.currentState!.validate()) return;
+    Navigator.pop(
+      context,
+      InventoryItem(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        name: name.text.trim(),
+        type: type,
+        unit: unit.text.trim(),
+        minimumStock: double.parse(minimum.text),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('قلم جدید انبار'),
+    content: Form(
+      key: formKey,
+      child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextFormField(
+            controller: name,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'نام قلم'),
+            validator: (v) => v == null || v.trim().isEmpty ? 'نام قلم را وارد کنید' : null,
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<InventoryItemType>(
+            initialValue: type,
+            decoration: const InputDecoration(labelText: 'دسته'),
+            items: InventoryItemType.values.map((x) => DropdownMenuItem(value: x, child: Text(x.title))).toList(),
+            onChanged: (v) { if (v != null) setState(() => type = v); },
+          ),
+          const SizedBox(height: 10),
+          TextFormField(controller: unit, decoration: const InputDecoration(labelText: 'واحد')),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: minimum,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'حداقل موجودی'),
+            validator: (v) => double.tryParse(v ?? '') == null ? 'عدد معتبر وارد کنید' : null,
+          ),
+        ]),
+      ),
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
+      FilledButton(onPressed: save, child: const Text('ذخیره')),
+    ],
+  );
 }
