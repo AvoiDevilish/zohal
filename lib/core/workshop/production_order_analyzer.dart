@@ -1,5 +1,5 @@
 import '../inventory/inventory_store.dart';
-import '../products/product_catalog.dart';
+import '../products/product_variant.dart';
 import '../sales/sales_order.dart';
 import '../sales/product_variant.dart' as sales;
 import '../sales/product_variant_store.dart';
