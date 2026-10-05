@@ -112,6 +112,26 @@ class ProductionOrderAnalyzer {
   }
 
   ProductVariant _toProductionProductFromLegacyCatalog(SalesOrderLine line) {
+    final flavor = switch (line.flavor) {
+      'زنجبیلی' || 'زنجبیل' => ProductFlavor.ginger,
+      'آرد نخودچی' => ProductFlavor.chickpeaFlour,
+      'ساده (پودر نشاسته ذرت)' || 'نشاسته' || 'نشاسته ذرت' => ProductFlavor.cornStarch,
+      _ => ProductFlavor.ginger,
+    };
+
+    final weight = RegExp(r'(\\d+)').firstMatch(line.packageLabel)?.group(1);
+    final weightGrams = int.tryParse(weight ?? '') ?? 100;
+
+    return ProductVariant(
+      id: line.productVariantId,
+      baseProductId: 'legacy-' + line.productVariantId,
+      name: line.productName,
+      weightGrams: weightGrams,
+      flavor: flavor,
+      sku: line.productVariantId,
+    );
+  }
+  ProductVariant _toProductionProductFromLegacyCatalog(SalesOrderLine line) {
     final legacy = initialProductVariants.where((x) => x.id == line.productVariantId);
     if (legacy.isEmpty) {
       throw StateError('محصول «'+line.productName+'» با شناسه '+line.productVariantId+' در کاتالوگ فروش پیدا نشد.');
