@@ -30,7 +30,19 @@ class PurchaseService {
     if (purchase.lines.isEmpty) throw ArgumentError('خرید باید حداقل یک قلم داشته باشد.');
     if (purchase.totalAmount <= 0) throw ArgumentError('مبلغ خرید باید بیشتر از صفر باشد.');
     final existing = await purchaseStore.getById(purchase.id);
-    if (existing != null) return existing;
+    if (existing != null) {
+      if (!_samePurchase(existing, purchase)) {
+        throw StateError('شناسه خرید برای اطلاعات دیگری استفاده شده است.');
+      }
+      return existing;
+    }
+
+    final lineIds = <String>{};
+    for (final line in purchase.lines) {
+      if (!lineIds.add(line.itemId)) {
+        throw ArgumentError('هر قلم باید فقط یک بار در خرید ثبت شود: ' + line.itemId);
+      }
+    }
 
     final calculatedTotal = purchase.lines.fold<int>(0, (sum, line) => sum + line.totalCost);
     if (calculatedTotal != purchase.totalAmount) {
@@ -122,8 +134,9 @@ class PurchaseService {
     if (quantities.isEmpty) throw ArgumentError('حداقل یک قلم برای برگشت خرید لازم است.');
     final existing = await purchaseReturnStore.getById(returnId);
     if (existing != null) {
-      if (existing.purchaseId != purchase.id) {
-        throw StateError('شناسه برگشت برای خرید دیگری استفاده شده است.');
+      if (existing.purchaseId != purchase.id ||
+          !_sameReturnRequest(existing, quantities)) {
+        throw StateError('شناسه برگشت برای اطلاعات دیگری استفاده شده است.');
       }
       return existing;
     }
@@ -276,6 +289,41 @@ class PurchaseService {
     );
     await purchaseReturnStore.add(result);
     return result;
+  }
+
+  bool _samePurchase(Purchase left, Purchase right) {
+    if (left.id != right.id ||
+        left.supplierId != right.supplierId ||
+        left.supplierName != right.supplierName ||
+        left.createdAt != right.createdAt ||
+        left.totalAmount != right.totalAmount ||
+        left.lines.length != right.lines.length) {
+      return false;
+    }
+    for (var i = 0; i < left.lines.length; i++) {
+      final a = left.lines[i];
+      final b = right.lines[i];
+      if (a.itemId != b.itemId ||
+          a.itemName != b.itemName ||
+          a.itemType != b.itemType ||
+          (a.quantity - b.quantity).abs() > 0.000001 ||
+          a.unit != b.unit ||
+          a.unitCost != b.unitCost) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _sameReturnRequest(PurchaseReturn existing, Map<String, double> quantities) {
+    if (existing.lines.length != quantities.length) return false;
+    for (final line in existing.lines) {
+      if ((quantities[line.itemId] ?? -1) - line.quantity > 0.000001 ||
+          line.quantity - (quantities[line.itemId] ?? -1) > 0.000001) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Future<int> getSupplierCredit(String supplierId) async {
