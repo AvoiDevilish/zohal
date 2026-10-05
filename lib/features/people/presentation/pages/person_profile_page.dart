@@ -53,9 +53,11 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
     final result = await showDialog<_PersonEditResult>(
       context: context,
       builder: (_) => _PersonEditDialog(
-        title: widget.type == PersonType.customer
-            ? 'ویرایش مشتری'
-            : 'ویرایش تأمین‌کننده',
+        title: widget.type == PersonType.both
+            ? 'ویرایش شخص'
+            : widget.type == PersonType.customer
+                ? 'ویرایش مشتری'
+                : 'ویرایش تأمین‌کننده',
         name: _name,
         phone: _phone,
         notes: _notes,
@@ -64,7 +66,7 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
 
     if (result == null || !mounted) return;
 
-    if (widget.type == PersonType.customer) {
+    if (widget.type == PersonType.customer || widget.type == PersonType.both) {
       final currentRows = await CustomerStore.instance.getAll();
       final matching = currentRows.where((item) => item.id == widget.personId);
       final existing = matching.isEmpty ? null : matching.first;
@@ -77,7 +79,9 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
           isActive: existing?.isActive ?? true,
         ),
       );
-    } else {
+    }
+
+    if (widget.type == PersonType.supplier || widget.type == PersonType.both) {
       final currentRows = await SupplierStore.instance.getAll();
       final matching = currentRows.where((item) => item.id == widget.personId);
       final existing = matching.isEmpty ? null : matching.first;
