@@ -134,6 +134,7 @@ void main() {
         unitCost: unitCost,
         createdAt: DateTime(2026, 1, 1),
         purchaseId: 'purchase-$materialId',
+        lotNumber: materialId == 'date' ? 'LOT-DATE-001' : null,
       ),
     );
   }
