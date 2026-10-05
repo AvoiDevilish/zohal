@@ -17,7 +17,7 @@ class SaleExecutionResult {
   });
 
   double get totalAmount => sale.totalAmount;
-
+}
 
 class SaleService {
   final SaleStore saleStore;
