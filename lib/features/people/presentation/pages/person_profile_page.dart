@@ -8,8 +8,10 @@ import '../../../../core/sales/sales_order.dart';
 import '../../../../core/sales/sales_order_store.dart';
 import '../../../../core/utils/persian_number_formatter.dart';
 import '../../../../core/widgets/zohal_card.dart';
+import '../../../sales/presentation/pages/sales_order_page.dart';
+import '../../../operations/presentation/pages/operations_page.dart';
 
-enum PersonType { customer, supplier }
+enum PersonType { customer, supplier, both }
 
 class PersonProfilePage extends StatefulWidget {
   const PersonProfilePage({
@@ -111,7 +113,8 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final isCustomer = widget.type == PersonType.customer;
+    final isCustomer = widget.type == PersonType.customer || widget.type == PersonType.both;
+    final isSupplier = widget.type == PersonType.supplier || widget.type == PersonType.both;
     final totalOrders = _orders.length;
     final totalValue = _orders.fold<int>(
       0,
@@ -161,7 +164,9 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
                                 ),
                               ),
                               Text(
-                                isCustomer ? 'مشتری' : 'تأمین‌کننده',
+                                widget.type == PersonType.both
+                                    ? 'مشتری • تأمین‌کننده'
+                                    : isCustomer ? 'مشتری' : 'تأمین‌کننده',
                                 textAlign: TextAlign.right,
                               ),
                               if (_phone != null && _phone!.isNotEmpty)
@@ -171,6 +176,42 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
                         ),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      if (isCustomer)
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const SalesOrderPage(),
+                                ),
+                              );
+                              await _load();
+                            },
+                            icon: const Icon(Icons.point_of_sale_outlined),
+                            label: const Text('ثبت سفارش فروش'),
+                          ),
+                        ),
+                      if (isCustomer && isSupplier) const SizedBox(width: 8),
+                      if (isSupplier)
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const OperationsPage(),
+                                ),
+                              );
+                              await _load();
+                            },
+                            icon: const Icon(Icons.shopping_cart_outlined),
+                            label: const Text('ثبت خرید'),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -214,7 +255,7 @@ class _PersonProfilePageState extends State<PersonProfilePage> {
                   ],
                   const SizedBox(height: 18),
                   Text(
-                    isCustomer ? 'سفارش‌های این مشتری' : 'خریدها و گردش این تأمین‌کننده',
+                    widget.type == PersonType.both ? 'سفارش‌ها و گردش این شخص' : isCustomer ? 'سفارش‌های این مشتری' : 'خریدها و گردش این تأمین‌کننده',
                     style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 10),
