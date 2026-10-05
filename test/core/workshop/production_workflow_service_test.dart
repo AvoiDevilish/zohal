@@ -470,7 +470,9 @@ void main() {
         now: DateTime(2026, 1, 1),
       );
 
-      expect(first.cost.totalCost, 26000);
+      expect(first.cost.totalCost, 31000);
+      expect(first.cost.materialCost, 26000);
+      expect(first.cost.packagingCost, 5000);
       expect(first.execution.batch.sourceLotNumbers, [
         'LOT-EARLY',
         'LOT-LATE',
