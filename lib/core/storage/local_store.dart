@@ -18,13 +18,18 @@ class LocalStore {
     final decoded = jsonDecode(raw);
 
     if (decoded is! List) {
-      return [];
+      throw StateError('داده ذخیره‌شده برای کلید "$key" ساختار فهرست ندارد.');
     }
 
-    return decoded
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
+    final rows = <Map<String, dynamic>>[];
+    for (final item in decoded) {
+      if (item is! Map) {
+        throw StateError('رکورد ذخیره‌شده برای کلید "$key" ساختار معتبری ندارد.');
+      }
+      rows.add(Map<String, dynamic>.from(item));
+    }
+
+    return rows;
   }
 
   Future<void> writeList(String key, List<Map<String, dynamic>> data) async {
