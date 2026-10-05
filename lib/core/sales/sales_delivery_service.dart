@@ -47,12 +47,16 @@ class SalesDeliveryService {
     required Map<String, int> quantities,
   }) async {
     if (quantities.isEmpty) throw ArgumentError('حداقل یک قلم برای تحویل لازم است.');
-    if (order.status != SalesOrderStatus.readyForDelivery &&
+
+    // Idempotent retries must be reconciled before validating the current
+    // order status: a successful first delivery may have moved the order to
+    // delivered, while the retry still needs to repair/confirm its prior state.
+    final existingDelivery = await deliveryStore.getById(deliveryId);
+    if (existingDelivery == null &&
+        order.status != SalesOrderStatus.readyForDelivery &&
         order.status != SalesOrderStatus.partiallyDelivered) {
       throw StateError('این سفارش در وضعیت قابل تحویل نیست.');
     }
-
-    final existingDelivery = await deliveryStore.getById(deliveryId);
     if (existingDelivery != null) {
       if (existingDelivery.orderId != order.id) {
         throw StateError('شناسه تحویل برای سفارش دیگری استفاده شده است.');
