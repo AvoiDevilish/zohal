@@ -524,4 +524,68 @@ void main() {
     },
   );
 
+  test(
+    'allows expired FEFO lot only with explicit workflow override',
+    () async {
+      await addInventoryStock(
+        itemId: 'date',
+        itemName: 'خرما',
+        quantity: 1000,
+        unit: 'g',
+      );
+      await addInventoryStock(
+        itemId: 'box',
+        itemName: 'ظرف',
+        quantity: 20,
+        unit: 'unit',
+        itemType: 'packaging',
+      );
+
+      await costLayerStore.add(
+        CostLayer(
+          id: 'expired-date-layer',
+          materialId: 'date',
+          materialName: 'خرما',
+          quantity: 1000,
+          remainingQuantity: 1000,
+          unit: 'g',
+          unitCost: 10,
+          createdAt: DateTime(2026, 1, 1),
+          purchaseId: 'purchase-expired-date',
+          lotNumber: 'LOT-EXPIRED',
+          expiryDate: DateTime(2026, 6, 30),
+        ),
+      );
+      await addCostLayer(
+        id: 'box-layer',
+        materialId: 'box',
+        materialName: 'ظرف',
+        quantity: 20,
+        unit: 'unit',
+        unitCost: 500,
+      );
+
+      final result = await service.execute(
+        batch: batch(),
+        calculation: calculation(),
+        costingMethod: CostingMethod.fefo,
+        allowExpiredLots: true,
+        now: DateTime(2026, 7, 1),
+      );
+
+      expect(result.execution.executed, isTrue);
+      expect(result.cost.totalCost, 15000);
+      expect(result.execution.batch.sourceLotNumbers, ['LOT-EXPIRED']);
+      expect(
+        (await costLayerStore.getById('expired-date-layer'))!.remainingQuantity,
+        0,
+      );
+      expect(
+        await inventoryStore.getStock('date'),
+        0,
+      );
+    },
+  );
+
+
 }
