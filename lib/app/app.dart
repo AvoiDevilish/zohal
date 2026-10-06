@@ -7,6 +7,8 @@ import '../core/people/person_store.dart';
 import '../core/sales/customer_store.dart';
 import '../core/sales/supplier_store.dart';
 import '../features/dashboard/presentation/pages/dashboard_page.dart';
+import '../features/inventory/presentation/pages/inventory_page.dart';
+import '../features/workshop/presentation/screens/workshop_dashboard_screen.dart';
 import '../features/sales/presentation/pages/sales_order_page.dart';
 import '../features/operations/presentation/pages/operations_page.dart';
 import '../features/assistant/presentation/pages/assistant_page.dart';
@@ -34,7 +36,7 @@ class ZohalHomePage extends StatefulWidget {
 }
 
 class _ZohalHomePageState extends State<ZohalHomePage> {
-  int _currentIndex = 1;
+  int _currentIndex = 2;
 
   @override
   void initState() {
@@ -52,10 +54,11 @@ class _ZohalHomePageState extends State<ZohalHomePage> {
   }
 
   final List<Widget> _pages = [
+    const InventoryPage(),
     SalesOrderPage(),
     DashboardPage(),
-    OperationsPage(),
-    AssistantPage(),
+    WorkshopDashboardScreen(),
+    const AssistantPage(),
   ];
 
   @override
@@ -72,6 +75,11 @@ class _ZohalHomePageState extends State<ZohalHomePage> {
           labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
           destinations: const [
             NavigationDestination(
+              icon: Icon(Icons.inventory_2_outlined),
+              selectedIcon: Icon(Icons.inventory_2),
+              label: 'انبار',
+            ),
+            NavigationDestination(
               icon: Icon(Icons.point_of_sale_outlined),
               selectedIcon: Icon(Icons.point_of_sale),
               label: 'فروش',
@@ -82,9 +90,9 @@ class _ZohalHomePageState extends State<ZohalHomePage> {
               label: 'خانه',
             ),
             NavigationDestination(
-              icon: Icon(Icons.account_balance_wallet_outlined),
-              selectedIcon: Icon(Icons.account_balance_wallet),
-              label: 'عملیات',
+              icon: Icon(Icons.precision_manufacturing_outlined),
+              selectedIcon: Icon(Icons.precision_manufacturing),
+              label: 'کارگاه',
             ),
             NavigationDestination(
               icon: Icon(Icons.auto_awesome_outlined),
